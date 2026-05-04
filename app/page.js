@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 
-const SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyaZI6xhnOwKdMnwREK8vpjGCttTif6UrTNr_KkD_E2YDGTJRZI32YjazWdtuVJBWrfSw/exec';
 
 const PINS = {
   Abdo: { pin: '5436', role: 'admin' },
