@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-title" content="Cash Manager" />
         <meta name="theme-color" content="#d4a843" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body style={{ margin: 0, padding: 0 }}>{children}</body>
     </html>
