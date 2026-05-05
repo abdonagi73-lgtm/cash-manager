@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const SCRIPT_URL = process.env.SCRIPT_URL;
@@ -10,11 +12,13 @@ export async function GET(request) {
   searchParams.forEach((value, key) => url.searchParams.set(key, value));
 
   try {
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(55000),
+    });
     const text = await response.text();
     const data = JSON.parse(text);
     return Response.json(data);
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
-} 
+}
