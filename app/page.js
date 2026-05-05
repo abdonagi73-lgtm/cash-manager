@@ -369,6 +369,25 @@ export default function App() {
       {page === 'today' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>● Live · Today</div>
+<div style={{ position: 'sticky', top: 56, zIndex: 39, background: C.bg, paddingBottom: 4 }}>
+  <div style={{ background: 'linear-gradient(135deg, rgba(212,168,67,.2), rgba(212,168,67,.05))', border: `1px solid rgba(212,168,67,.4)`, borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div>
+      <div style={{ fontSize: 10, color: C.gold, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>Expected in Drawer</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
+    </div>
+    <div style={{ textAlign: 'right' }}>
+      <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+        {fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} − {fmt(dash?.cashOut)}
+      </div>
+      {diff !== null && (
+        <div style={{ fontSize: 13, fontWeight: 700, padding: '5px 10px', borderRadius: 8, background: Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
+          {Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)} Over` : `${fmt(diff)} Short`}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <MC label="Cash In" value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn || 0} transactions`} c1="rgba(45,182,125,.15)" c2="#2db67d" />
             <MC label="Cash Out" value={fmt(dash?.cashOut)} sub={`${dash?.cashOutEntries?.length || 0} entries`} c1="rgba(224,82,82,.15)" c2="#e05252" />
