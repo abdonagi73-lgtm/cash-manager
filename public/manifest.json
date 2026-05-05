@@ -1,0 +1,22 @@
+{
+  "name": "Choices For You - Cash Manager",
+  "short_name": "Cash Manager",
+  "description": "Cash tracking for Choices For You",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f12",
+  "theme_color": "#d4a843",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
