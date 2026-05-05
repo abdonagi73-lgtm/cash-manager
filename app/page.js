@@ -344,72 +344,50 @@ export default function App() {
           {rptLoading && <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Loading...</div>}
           {rptData && !rptLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
-                {[['Cash In', rptData.totalIn, '#d4a843'],['Cash Out', rptData.totalOut, '#e05252'],['Days', rptData.days, '#5b8af0']].map(([l,v,c]) => (
-                  <div key={l} style={{ background: '#1a1a20', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: c }}>{typeof v === 'number' && v > 100 ? fmt(v) : v}</div>
-                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>{l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+      {[
+        ['Cash In', fmt(rptData.totalIn), '#d4a843'],
+        ['Cash Out', fmt(rptData.totalOut), '#e05252'],
+        ['Days', rptData.days ? rptData.days.length : 0, '#5b8af0'],
+        ['Over', rptData.overCount || 0, '#ffd166'],
+        ['Short', rptData.shortCount || 0, '#e05252'],
+        ['Match', rptData.matchCount || 0, '#5b8af0'],
+      ].map(([l,v,c]) => (
+        <div key={l} style={{ background: '#1a1a20', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: c }}>{v}</div>
+          <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>{l}</div>
         </div>
-      )}
-
-      {/* BOTTOM NAV */}
-      <div style={s.botnav}>
-        {tabs.map(([id, ic, lb]) => (
-          <button key={id} style={{ ...s.btb, color: page === id ? '#d4a843' : '#888' }} onClick={() => setPage(id)}>
-            <span style={{ fontSize: 22 }}>{ic}</span>
-            <span style={{ fontSize: 10, fontWeight: 500 }}>{lb}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* CONFIRM SHEET */}
-      {confirmSheet && (
-        <div style={s.ovl} onClick={e => e.target === e.currentTarget && setConfirmSheet(false)}>
-          <div style={s.sheet}>
-            <div style={s.shandle} />
-            <div style={{ fontSize: 36, textAlign: 'center' }}>💸</div>
-            <div style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }}>Confirm Cash Out</div>
-            <div style={{ fontSize: 14, color: '#888', textAlign: 'center' }}>Review before submitting.</div>
-            <div style={s.sdet}>
-              {[['Who', pending?.who],['Amount', fmt(pending?.amt)],['Reason', pending?.reason],pending?.reason === 'Employee Pay' ? ['Hours', pending?.note?.split(' hrs')[0]+' hrs'] : null, pending?.note ? ['Note', pending.note] : null].filter(Boolean).map(([l,v],i,arr) => (
-                <div key={l} style={{ ...s.srow, borderBottom: i < arr.length-1 ? '1px solid rgba(255,255,255,.08)' : 'none' }}>
-                  <span style={{ color: '#888', fontSize: 15 }}>{l}</span>
-                  <span style={{ color: l === 'Amount' ? '#d4a843' : '#fff', fontWeight: 600, fontSize: 15 }}>{v}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <button style={s.btnGhost} onClick={() => setConfirmSheet(false)}>Cancel</button>
-              <button style={s.btn} onClick={submitOut}>Submit</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SUCCESS SHEET */}
-      {successSheet && (
-        <div style={s.ovl} onClick={e => e.target === e.currentTarget && setSuccessSheet(false)}>
-          <div style={s.sheet}>
-            <div style={s.shandle} />
-            <div style={{ fontSize: 36, textAlign: 'center' }}>✅</div>
-            <div style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }}>Done!</div>
-            <div style={{ fontSize: 14, color: '#888', textAlign: 'center' }}>{successMsg}</div>
-            <button style={s.btn} onClick={() => setSuccessSheet(false)}>Close</button>
-          </div>
-        </div>
-      )}
-
-      {/* TOAST */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: '#1a1a20', border: `1px solid ${toast.type === 'err' ? 'rgba(224,82,82,.5)' : 'rgba(212,168,67,.5)'}`, borderRadius: 14, padding: '13px 22px', fontSize: 14, zIndex: 200, whiteSpace: 'nowrap', color: toast.type === 'err' ? '#e05252' : '#d4a843' }}>
-          {toast.msg}
-        </div>
-      )}
+      ))}
     </div>
-  );
-}
+
+    {rptData.days && rptData.days.length > 0 && (
+      <div style={{ background: '#1a1a20', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 340 }}>
+          <thead>
+            <tr>
+              {['Date','Cash In','Txn','Cash Out','Diff'].map(h => (
+                <th key={h} style={{ background: '#22222a', color: '#888', fontSize: 11, letterSpacing: 1, padding: '10px 12px', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,.08)', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {[...rptData.days].reverse().map((d, i) => (
+              <tr key={i}>
+                <td style={{ padding: '11px 12px', borderBottom: '1px solid rgba(255,255,255,.05)', color: '#888', fontSize: 12 }}>{d.date}</td>
+                <td style={{ padding: '11px 12px', borderBottom: '1px solid rgba(255,255,255,.05)', color: '#2db67d', fontWeight: 600 }}>{fmt(d.cashIn)}</td>
+                <td style={{ padding: '11px 12px', borderBottom: '1px solid rgba(255,255,255,.05)', color: '#888' }}>{d.cashInTxn}</td>
+                <td style={{ padding: '11px 12px', borderBottom: '1px solid rgba(255,255,255,.05)', color: '#e05252' }}>{fmt(d.cashOut)}</td>
+                <td style={{ padding: '11px 12px', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
+                  {d.diff === null ? '—' :
+                    Math.abs(d.diff) < 0.01 ? <span style={{ color: '#2db67d' }}>✓</span> :
+                    d.diff > 0 ? <span style={{ color: '#ffd166' }}>+{fmt(d.diff)}</span> :
+                    <span style={{ color: '#e05252' }}>{fmt(d.diff)}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+)}
