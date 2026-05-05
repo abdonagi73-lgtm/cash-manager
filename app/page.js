@@ -16,10 +16,10 @@ function fmt(n) {
 }
 
 function callScript(action, params = {}) {
-  const url = new URL(SCRIPT_URL);
+  const url = new URL(SCRIPT_URL, window.location.origin);
   url.searchParams.set('action', action);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  return fetch(url).then(r => r.json());
+  return fetch(url.toString()).then(r => r.json());
 }
 
 export default function App() {
