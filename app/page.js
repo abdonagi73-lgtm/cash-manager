@@ -528,7 +528,34 @@ export default function App() {
                   </table>
                 </div>
               )}
-
+{rptData.cashOutEntries && rptData.cashOutEntries.length > 0 && (
+  <div style={card}>
+    <div style={{ fontSize: 16, fontWeight: 700 }}>Cash Out Entries</div>
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 380 }}>
+        <thead>
+          <tr>
+            {['Date','Time','Who','Amount','Reason','Note'].map(h => (
+              <th key={h} style={{ background: C.surf2, color: C.muted, fontSize: 11, letterSpacing: 1, padding: '10px 12px', textAlign: 'left', textTransform: 'uppercase', borderBottom: `1px solid ${C.bord}`, whiteSpace: 'nowrap' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rptData.cashOutEntries.map((e, i) => (
+            <tr key={i}>
+              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.date}</td>
+              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.time}</td>
+              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)` }}>{e.who}</td>
+              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</td>
+              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted }}>{e.reason}</td>
+              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.note || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
               <button style={{ ...btn, background: '#1a1a20', border: `1px solid ${C.bord}`, color: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={exportPDF} disabled={pdfLoading}>
                 {pdfLoading ? 'Generating...' : '📄 Export PDF'}
               </button>
