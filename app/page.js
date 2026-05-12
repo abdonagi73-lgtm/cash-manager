@@ -629,11 +629,11 @@ export default function App() {
 }
 
 function RamLoader() {
-  const [prog, setProgState] = React.useState(0);
-  const progRef = React.useRef(0);
-  const rafRef = React.useRef(null);
+  const [prog, setProgState] = useState(0);
+  const progRef = useRef(0);
+  const rafRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const animate = () => {
       progRef.current = Math.min(progRef.current + 0.8, 95);
       setProgState(progRef.current);
@@ -649,7 +649,6 @@ function RamLoader() {
 
   return (
     <div style={{ position: 'relative', width: 140, height: 140 }}>
-      {/* Dark silhouette base */}
       <img
         src="/logo.png"
         alt="Loading"
@@ -661,7 +660,6 @@ function RamLoader() {
           filter: 'brightness(0) invert(1)',
         }}
       />
-      {/* Revealed logo - clips from bottom to top */}
       <div style={{
         position: 'absolute', top: 0, left: 0,
         width: 140, height: 140,
@@ -679,7 +677,6 @@ function RamLoader() {
           }}
         />
       </div>
-      {/* Gold glow overlay at progress tip */}
       <div style={{
         position: 'absolute',
         top: `${100 - prog - 5}%`,
@@ -689,7 +686,6 @@ function RamLoader() {
         pointerEvents: 'none',
         opacity: prog > 5 ? 1 : 0,
       }} />
-      {/* Eye pulse at completion */}
       {eyeOpacity > 0 && (
         <div style={{
           position: 'absolute',
