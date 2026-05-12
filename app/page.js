@@ -485,7 +485,12 @@ export default function App() {
           </div>
           <button style={btn} onClick={loadReport}>Pull Report</button>
 
-          {rptLoading && <div style={{ textAlign: 'center', padding: 40, color: C.muted, fontSize: 14 }}>Loading...</div>}
+          {rptLoading && (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}>
+    <RamLoader />
+    <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
+  </div>
+)}
 
           {rptData && !rptLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} ref={reportRef}>
