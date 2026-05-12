@@ -622,3 +622,81 @@ export default function App() {
     </div>
   );
 }
+function RamLoader() {
+  const [prog, setProgState] = React.useState(0);
+  const progRef = React.useRef(0);
+  const rafRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const animate = () => {
+      progRef.current = Math.min(progRef.current + 0.8, 95);
+      setProgState(progRef.current);
+      if (progRef.current < 95) rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const p = prog / 100;
+  const eyeOpacity = prog >= 85 ? (prog - 85) / 15 : 0;
+  const glowOpacity = 0.3 + p * 0.7;
+
+  return (
+    <div style={{ position: 'relative', width: 140, height: 140 }}>
+      {/* Dark silhouette base */}
+      <img
+        src="/logo.png"
+        alt="Loading"
+        style={{
+          position: 'absolute', top: 0, left: 0,
+          width: 140, height: 140,
+          objectFit: 'contain',
+          opacity: 0.15,
+          filter: 'brightness(0) invert(1)',
+        }}
+      />
+      {/* Revealed logo - clips from bottom to top */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0,
+        width: 140, height: 140,
+        overflow: 'hidden',
+        clipPath: `inset(${100 - prog}% 0 0 0)`,
+        transition: 'clip-path 0.05s linear',
+      }}>
+        <img
+          src="/logo.png"
+          alt=""
+          style={{
+            width: 140, height: 140,
+            objectFit: 'contain',
+            filter: `brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(${glowOpacity + 0.5})`,
+          }}
+        />
+      </div>
+      {/* Gold glow overlay at progress tip */}
+      <div style={{
+        position: 'absolute',
+        top: `${100 - prog - 5}%`,
+        left: 0, right: 0,
+        height: '12%',
+        background: 'linear-gradient(to bottom, transparent, rgba(212,168,67,0.4), transparent)',
+        pointerEvents: 'none',
+        opacity: prog > 5 ? 1 : 0,
+      }} />
+      {/* Eye pulse at completion */}
+      {eyeOpacity > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: '35%', left: '55%',
+          width: 16, height: 16,
+          borderRadius: '50%',
+          background: '#d4a843',
+          opacity: eyeOpacity * 0.7,
+          filter: 'blur(6px)',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+        }} />
+      )}
+    </div>
+  );
+}
