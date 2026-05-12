@@ -82,6 +82,8 @@ export default function App() {
   const [rptEnd, setRptEnd] = useState('');
   const [rptData, setRptData] = useState(null);
   const [rptLoading, setRptLoading] = useState(false);
+const [dashLoading, setDashLoading] = useState(true);
+const [rptProgress, setRptProgress] = useState(0);
   const [pdfLoading, setPdfLoading] = useState(false);
   const reportRef = useRef(null);
 
@@ -104,10 +106,11 @@ export default function App() {
   };
 
   const loadDash = useCallback(() => {
-    callScript('getDashboard')
-      .then(d => setDash(d))
-      .catch(() => showToast('Load error', 'err'));
-  }, []);
+  setDashLoading(true);
+  callScript('getDashboard')
+    .then(d => { setDash(d); setDashLoading(false); })
+    .catch(() => { showToast('Load error', 'err'); setDashLoading(false); });
+}, []);
 
   useEffect(() => {
     if (user) {
@@ -125,15 +128,21 @@ export default function App() {
   };
 
   const doLogin = (p) => {
-    const pval = p || pin;
-    if (pval.length < 4) { setLoginErr('Enter your 4-digit PIN.'); return; }
-    const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
-    if (!match) { setLoginErr('Incorrect PIN. Try again.'); setPin(''); return; }
-    setUser({ name: match[0], role: match[1].role });
-    setLoginErr(''); setPin('');
-  };
+  const pval = p || pin;
+  if (pval.length < 4) { setLoginErr('Enter your 4-digit PIN.'); return; }
+  const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
+  if (!match) { setLoginErr('Incorrect PIN. Try again.'); setPin(''); return; }
+  const userData = { name: match[0], role: match[1].role };
+  sessionStorage.setItem('cashUser', JSON.stringify(userData));
+  setUser(userData);
+  setLoginErr(''); setPin('');
+};
 
-  const logout = () => { setUser(null); setPin(''); setPage('today'); setDash(null); setRptData(null); };
+  const logout = () => {
+  sessionStorage.removeItem('cashUser');
+  setUser(null); setPin(''); setPage('today');
+  setDash(null); setRptData(null);
+};
 
   const expectedInDrawer = dash ? (dash.openingAmount + dash.cashIn - dash.cashOut) : 0;
   const diff = actual !== '' && !isNaN(parseFloat(actual)) ? parseFloat(actual) - expectedInDrawer : null;
@@ -369,6 +378,14 @@ export default function App() {
       {page === 'today' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>● Live · Today</div>
+{dashLoading && (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}>
+    <RamLoader />
+    <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
+  </div>
+)}
+{!dashLoading && (
+  <>
 <div style={{ position: 'sticky', top: 56, zIndex: 39, background: C.bg, paddingBottom: 4 }}>
   <div style={{ background: 'linear-gradient(135deg, rgba(212,168,67,.2), rgba(212,168,67,.05))', border: `1px solid rgba(212,168,67,.4)`, borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
     <div>
@@ -439,9 +456,11 @@ export default function App() {
           </div>
           <div style={{ textAlign: 'center', padding: 14, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
             Built by <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />Need help? Contact me
-          </div>
-        </div>
-      )}
+
+        </>
+    )}
+  </div>
+)}
 
       {/* CASH OUT */}
       {page === 'cashout' && (
@@ -628,77 +647,42 @@ export default function App() {
   );
 }
 
-function RamLoader() {
-  const [prog, setProgState] = useState(0);
+function RamLoader({ progress = null }) {
+  const [fakeP, setFakeP] = useState(0);
   const progRef = useRef(0);
   const rafRef = useRef(null);
 
   useEffect(() => {
+    if (progress !== null) return;
     const animate = () => {
-      progRef.current = Math.min(progRef.current + 0.8, 95);
-      setProgState(progRef.current);
-      if (progRef.current < 95) rafRef.current = requestAnimationFrame(animate);
+      progRef.current = Math.min(progRef.current + 0.4, 90);
+      setFakeP(progRef.current);
+      if (progRef.current < 90) rafRef.current = requestAnimationFrame(animate);
     };
+useEffect(() => {
+  try {
+    const saved = sessionStorage.getItem('cashUser');
+    if (saved) setUser(JSON.parse(saved));
+  } catch(e) {}
+}, []);
+
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
-  }, []);
+  }, [progress]);
 
+  const prog = progress !== null ? progress : fakeP;
   const p = prog / 100;
   const eyeOpacity = prog >= 85 ? (prog - 85) / 15 : 0;
   const glowOpacity = 0.3 + p * 0.7;
 
   return (
     <div style={{ position: 'relative', width: 140, height: 140 }}>
-      <img
-        src="/logo.png"
-        alt="Loading"
-        style={{
-          position: 'absolute', top: 0, left: 0,
-          width: 140, height: 140,
-          objectFit: 'contain',
-          opacity: 0.15,
-          filter: 'brightness(0) invert(1)',
-        }}
-      />
-      <div style={{
-        position: 'absolute', top: 0, left: 0,
-        width: 140, height: 140,
-        overflow: 'hidden',
-        clipPath: `inset(${100 - prog}% 0 0 0)`,
-        transition: 'clip-path 0.05s linear',
-      }}>
-        <img
-          src="/logo.png"
-          alt=""
-          style={{
-            width: 140, height: 140,
-            objectFit: 'contain',
-            filter: `brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(${glowOpacity + 0.5})`,
-          }}
-        />
+      <img src="/logo.png" alt="Loading" style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, objectFit: 'contain', opacity: 0.15, filter: 'brightness(0) invert(1)' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, overflow: 'hidden', clipPath: `inset(${100 - prog}% 0 0 0)`, transition: 'clip-path 0.1s linear' }}>
+        <img src="/logo.png" alt="" style={{ width: 140, height: 140, objectFit: 'contain', filter: `brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(${glowOpacity + 0.5})` }} />
       </div>
-      <div style={{
-        position: 'absolute',
-        top: `${100 - prog - 5}%`,
-        left: 0, right: 0,
-        height: '12%',
-        background: 'linear-gradient(to bottom, transparent, rgba(212,168,67,0.4), transparent)',
-        pointerEvents: 'none',
-        opacity: prog > 5 ? 1 : 0,
-      }} />
-      {eyeOpacity > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '35%', left: '55%',
-          width: 16, height: 16,
-          borderRadius: '50%',
-          background: '#d4a843',
-          opacity: eyeOpacity * 0.7,
-          filter: 'blur(6px)',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-        }} />
-      )}
+      <div style={{ position: 'absolute', top: `${100 - prog - 5}%`, left: 0, right: 0, height: '12%', background: 'linear-gradient(to bottom, transparent, rgba(212,168,67,0.4), transparent)', pointerEvents: 'none', opacity: prog > 5 ? 1 : 0 }} />
+      {eyeOpacity > 0 && <div style={{ position: 'absolute', top: '35%', left: '55%', width: 16, height: 16, borderRadius: '50%', background: '#d4a843', opacity: eyeOpacity * 0.7, filter: 'blur(6px)', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />}
     </div>
   );
 }
