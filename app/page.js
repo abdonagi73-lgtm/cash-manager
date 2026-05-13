@@ -64,22 +64,19 @@ function RamLoader() {
   const dirRef = useRef(1);
   const progRef = useRef(0);
   const rafRef = useRef(null);
-
   useEffect(() => {
     const animate = () => {
       progRef.current += dirRef.current * 0.6;
-      if (progRef.current >= 95) { dirRef.current = -1; }
-      if (progRef.current <= 5)  { dirRef.current =  1; }
+      if (progRef.current >= 95) dirRef.current = -1;
+      if (progRef.current <= 5)  dirRef.current =  1;
       setProg(progRef.current);
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
-
   const p = prog / 100;
   const glowOpacity = 0.4 + p * 0.6;
-
   return (
     <div style={{ position: 'relative', width: 140, height: 140 }}>
       <img src="/logo.png" alt="Loading" style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, objectFit: 'contain', opacity: 0.12, filter: 'brightness(0) invert(1)' }} />
@@ -123,7 +120,6 @@ export default function App() {
     bord: 'rgba(255,255,255,.08)', gold: '#d4a843',
     green: '#2db67d', red: '#e05252', blue: '#5b8af0', muted: '#888',
   };
-
   const inp = { background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 12, color: '#fff', fontSize: 16, padding: '14px 16px', width: '100%', outline: 'none', fontFamily: 'inherit', appearance: 'none', WebkitAppearance: 'none' };
   const btn = { display: 'block', width: '100%', background: C.gold, border: 'none', borderRadius: 14, color: '#0f0f12', fontSize: 16, fontWeight: 700, padding: 16, textAlign: 'center', cursor: 'pointer', fontFamily: 'inherit' };
   const btnG = { ...btn, background: C.surf2, border: `1px solid ${C.bord}`, color: '#fff', fontWeight: 500, padding: 14 };
@@ -182,7 +178,9 @@ export default function App() {
     setDash(null); setRptData(null);
   };
 
-  const expectedInDrawer = dash ? (dash.openingAmount + dash.cashIn - dash.cashOut) : 0;
+  const expectedInDrawer = dash
+    ? (dash.openingAmount + dash.cashIn + (dash.drawerCashIn || 0) - dash.cashOut - (dash.drawerCashOut || 0))
+    : 0;
   const diff = actual !== '' && !isNaN(parseFloat(actual)) ? parseFloat(actual) - expectedInDrawer : null;
 
   const saveDrawer = (type) => {
@@ -371,7 +369,6 @@ export default function App() {
       {page === 'today' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>● Live · Today</div>
-
           {dashLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
               <RamLoader />
@@ -386,7 +383,9 @@ export default function App() {
                     <div style={{ fontSize: 28, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>{fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} − {fmt(dash?.cashOut)}</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                      {fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} + {fmt(dash?.drawerCashIn || 0)} − {fmt(dash?.cashOut)} − {fmt(dash?.drawerCashOut || 0)}
+                    </div>
                     {diff !== null && (
                       <div style={{ fontSize: 13, fontWeight: 700, padding: '5px 10px', borderRadius: 8, background: Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
                         {Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)} Over` : `${fmt(diff)} Short`}
@@ -397,8 +396,10 @@ export default function App() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <MC label="Cash In" value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn || 0} transactions`} c1="rgba(45,182,125,.15)" c2="#2db67d" />
-                <MC label="Cash Out" value={fmt(dash?.cashOut)} sub={`${dash?.cashOutEntries?.length || 0} entries`} c1="rgba(224,82,82,.15)" c2="#e05252" />
+                <MC label="Square Sales" value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn || 0} transactions`} c1="rgba(45,182,125,.15)" c2="#2db67d" />
+                <MC label="Manual Out" value={fmt(dash?.cashOut)} sub={`${dash?.cashOutEntries?.length || 0} entries`} c1="rgba(224,82,82,.15)" c2="#e05252" />
+                <MC label="POS Cash In" value={fmt(dash?.drawerCashIn || 0)} sub="from square pos" c1="rgba(91,138,240,.15)" c2="#5b8af0" />
+                <MC label="POS Cash Out" value={fmt(dash?.drawerCashOut || 0)} sub="from square pos" c1="rgba(255,100,100,.15)" c2="#ff6464" />
                 <MC label="Opening" value={fmt(dash?.openingAmount)} sub={dash?.openingAmount > 0 ? 'set today' : 'not set'} c1="rgba(91,138,240,.15)" c2="#5b8af0" />
                 <MC label="Closing" value={dash?.closingAmount > 0 ? fmt(dash.closingAmount) : '—'} sub="end of day" c1="rgba(212,168,67,.15)" c2="#d4a843" />
               </div>
@@ -407,7 +408,9 @@ export default function App() {
                 <div style={{ textAlign: 'center', background: C.surf2, borderRadius: 14, padding: '18px 12px' }}>
                   <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>Expected in Drawer</div>
                   <div style={{ fontSize: 40, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>{fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} − {fmt(dash?.cashOut)}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
+                    {fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} + {fmt(dash?.drawerCashIn || 0)} − {fmt(dash?.cashOut)} − {fmt(dash?.drawerCashOut || 0)}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Actual $</span>
@@ -495,14 +498,12 @@ export default function App() {
             <div style={fld}><label style={flbl}>End</label><input style={inp} type="date" value={rptEnd} onChange={e => setRptEnd(e.target.value)} /></div>
           </div>
           <button style={btn} onClick={loadReport}>Pull Report</button>
-
           {rptLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
               <RamLoader />
               <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
             </div>
           )}
-
           {rptData && !rptLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} ref={reportRef}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
@@ -520,9 +521,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
-
               <Chart days={rptData.days} />
-
               {rptData.days && rptData.days.length > 0 && (
                 <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 340 }}>
@@ -544,7 +543,6 @@ export default function App() {
                   </table>
                 </div>
               )}
-
               {rptData.cashOutEntries && rptData.cashOutEntries.length > 0 && (
                 <div style={card}>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>Cash Out Entries</div>
@@ -567,7 +565,6 @@ export default function App() {
                   </div>
                 </div>
               )}
-
               <button style={{ ...btn, background: '#1a1a20', border: `1px solid ${C.bord}`, color: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={exportPDF} disabled={pdfLoading}>
                 {pdfLoading ? 'Generating...' : '📄 Export PDF'}
               </button>
@@ -629,7 +626,6 @@ export default function App() {
           {toast.msg}
         </div>
       )}
-
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
