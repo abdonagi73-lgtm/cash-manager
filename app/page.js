@@ -59,12 +59,44 @@ function Chart({ days }) {
   );
 }
 
+function RamLoader() {
+  const [prog, setProg] = useState(0);
+  const progRef = useRef(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const animate = () => {
+      progRef.current = Math.min(progRef.current + 0.4, 90);
+      setProg(progRef.current);
+      if (progRef.current < 90) rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const p = prog / 100;
+  const eyeOpacity = prog >= 85 ? (prog - 85) / 15 : 0;
+  const glowOpacity = 0.3 + p * 0.7;
+
+  return (
+    <div style={{ position: 'relative', width: 140, height: 140 }}>
+      <img src="/logo.png" alt="Loading" style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, objectFit: 'contain', opacity: 0.15, filter: 'brightness(0) invert(1)' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, overflow: 'hidden', clipPath: `inset(${100 - prog}% 0 0 0)`, transition: 'clip-path 0.1s linear' }}>
+        <img src="/logo.png" alt="" style={{ width: 140, height: 140, objectFit: 'contain', filter: `brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(${glowOpacity + 0.5})` }} />
+      </div>
+      <div style={{ position: 'absolute', top: `${100 - prog - 5}%`, left: 0, right: 0, height: '12%', background: 'linear-gradient(to bottom, transparent, rgba(212,168,67,0.4), transparent)', pointerEvents: 'none', opacity: prog > 5 ? 1 : 0 }} />
+      {eyeOpacity > 0 && <div style={{ position: 'absolute', top: '35%', left: '55%', width: 16, height: 16, borderRadius: '50%', background: '#d4a843', opacity: eyeOpacity * 0.7, filter: 'blur(6px)', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />}
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('today');
   const [pin, setPin] = useState('');
   const [loginErr, setLoginErr] = useState('');
   const [dash, setDash] = useState(null);
+  const [dashLoading, setDashLoading] = useState(true);
   const [actual, setActual] = useState('');
   const [openingAmt, setOpeningAmt] = useState('');
   const [closingAmt, setClosingAmt] = useState('');
@@ -82,8 +114,6 @@ export default function App() {
   const [rptEnd, setRptEnd] = useState('');
   const [rptData, setRptData] = useState(null);
   const [rptLoading, setRptLoading] = useState(false);
-const [dashLoading, setDashLoading] = useState(true);
-const [rptProgress, setRptProgress] = useState(0);
   const [pdfLoading, setPdfLoading] = useState(false);
   const reportRef = useRef(null);
 
@@ -106,11 +136,11 @@ const [rptProgress, setRptProgress] = useState(0);
   };
 
   const loadDash = useCallback(() => {
-  setDashLoading(true);
-  callScript('getDashboard')
-    .then(d => { setDash(d); setDashLoading(false); })
-    .catch(() => { showToast('Load error', 'err'); setDashLoading(false); });
-}, []);
+    setDashLoading(true);
+    callScript('getDashboard')
+      .then(d => { setDash(d); setDashLoading(false); })
+      .catch(() => { showToast('Load error', 'err'); setDashLoading(false); });
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -120,6 +150,13 @@ const [rptProgress, setRptProgress] = useState(0);
     }
   }, [user, loadDash]);
 
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('cashUser');
+      if (saved) setUser(JSON.parse(saved));
+    } catch(e) {}
+  }, []);
+
   const addPin = (k) => {
     if (pin.length >= 4) return;
     const np = pin + k;
@@ -128,21 +165,21 @@ const [rptProgress, setRptProgress] = useState(0);
   };
 
   const doLogin = (p) => {
-  const pval = p || pin;
-  if (pval.length < 4) { setLoginErr('Enter your 4-digit PIN.'); return; }
-  const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
-  if (!match) { setLoginErr('Incorrect PIN. Try again.'); setPin(''); return; }
-  const userData = { name: match[0], role: match[1].role };
-  sessionStorage.setItem('cashUser', JSON.stringify(userData));
-  setUser(userData);
-  setLoginErr(''); setPin('');
-};
+    const pval = p || pin;
+    if (pval.length < 4) { setLoginErr('Enter your 4-digit PIN.'); return; }
+    const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
+    if (!match) { setLoginErr('Incorrect PIN. Try again.'); setPin(''); return; }
+    const userData = { name: match[0], role: match[1].role };
+    sessionStorage.setItem('cashUser', JSON.stringify(userData));
+    setUser(userData);
+    setLoginErr(''); setPin('');
+  };
 
   const logout = () => {
-  sessionStorage.removeItem('cashUser');
-  setUser(null); setPin(''); setPage('today');
-  setDash(null); setRptData(null);
-};
+    sessionStorage.removeItem('cashUser');
+    setUser(null); setPin(''); setPage('today');
+    setDash(null); setRptData(null);
+  };
 
   const expectedInDrawer = dash ? (dash.openingAmount + dash.cashIn - dash.cashOut) : 0;
   const diff = actual !== '' && !isNaN(parseFloat(actual)) ? parseFloat(actual) - expectedInDrawer : null;
@@ -204,7 +241,6 @@ const [rptProgress, setRptProgress] = useState(0);
   const exportPDF = () => {
     if (!rptData) return;
     setPdfLoading(true);
-
     const maxVal = Math.max(...rptData.days.map(d => Math.max(d.cashIn, d.cashOut)), 1);
     const chartBars = rptData.days.map(d => `
       <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:28px;height:100%">
@@ -214,7 +250,6 @@ const [rptProgress, setRptProgress] = useState(0);
         </div>
         <div style="font-size:8px;color:#888;text-align:center">${d.date.slice(5)}</div>
       </div>`).join('');
-
     const tableRows = [...rptData.days].reverse().map(d => `
       <tr>
         <td>${d.date}</td>
@@ -225,15 +260,10 @@ const [rptProgress, setRptProgress] = useState(0);
         <td>${d.closing > 0 ? fmt(d.closing) : '—'}</td>
         <td>${d.diff == null ? '—' : Math.abs(d.diff) < 0.01 ? '✓ Match' : d.diff > 0 ? `+${fmt(d.diff)} OVER` : `${fmt(d.diff)} SHORT`}</td>
       </tr>`).join('');
-
     const byPersonRows = Object.entries(rptData.byPerson || {}).sort((a,b) => b[1]-a[1]).map(([name, amt]) => `
       <tr><td>${name}</td><td style="color:#e05252;font-weight:600">${fmt(amt)}</td></tr>`).join('');
-
     const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Cash Report - Choices For You</title>
+<html><head><meta charset="UTF-8"><title>Cash Report - Choices For You</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, Arial, sans-serif; background: #fff; color: #111; padding: 40px; font-size: 13px; }
@@ -241,86 +271,48 @@ const [rptProgress, setRptProgress] = useState(0);
   .logo { width: 60px; height: 60px; object-fit: contain; background: #111; border-radius: 12px; padding: 6px; }
   .brand h1 { font-size: 22px; font-weight: 700; color: #111; }
   .brand p { font-size: 12px; color: #666; margin-top: 2px; }
-  .report-title { font-size: 14px; color: #888; margin-top: 4px; }
   .summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 28px; }
   .sc { background: #f5f5f5; border-radius: 10px; padding: 14px; }
   .sc-val { font-size: 20px; font-weight: 700; color: #111; }
-  .sc-val.green { color: #1a8a5a; }
-  .sc-val.red { color: #c0392b; }
-  .sc-val.blue { color: #2563eb; }
   .sc-lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
   .section-title { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
-  .chart-wrap { margin-bottom: 28px; }
-  .chart { display: flex; align-items: flex-end; gap: 6px; height: 100px; background: #f9f9f9; border-radius: 10px; padding: 12px; }
-  .legend { display: flex; gap: 16px; margin-bottom: 8px; }
-  .leg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #666; }
-  .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .chart { display: flex; align-items: flex-end; gap: 6px; height: 100px; background: #f9f9f9; border-radius: 10px; padding: 12px; margin-bottom: 28px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
-  th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 10px 12px; text-align: left; color: #666; }
+  th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; padding: 10px 12px; text-align: left; color: #666; }
   td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 12px; }
   tr:last-child td { border-bottom: none; }
   .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #aaa; line-height: 1.8; }
   @media print { body { padding: 20px; } }
-</style>
-</head>
-<body>
+</style></head><body>
   <div class="header">
     <img class="logo" src="${window.location.origin}/logo.png" alt="Logo" />
-    <div class="brand">
-      <h1>Choices For You</h1>
-      <p>Cash Manager Report</p>
-      <p class="report-title">Period: ${rptStart} to ${rptEnd} · Generated: ${new Date().toLocaleString()}</p>
-    </div>
+    <div class="brand"><h1>Choices For You</h1><p>Cash Manager Report</p><p style="font-size:12px;color:#888;margin-top:4px">Period: ${rptStart} to ${rptEnd} · Generated: ${new Date().toLocaleString()}</p></div>
   </div>
-
   <div class="summary">
-    <div class="sc"><div class="sc-val green">${fmt(rptData.totalIn)}</div><div class="sc-lbl">Total Cash In</div></div>
-    <div class="sc"><div class="sc-val red">${fmt(rptData.totalOut)}</div><div class="sc-lbl">Total Cash Out</div></div>
+    <div class="sc"><div class="sc-val" style="color:#1a8a5a">${fmt(rptData.totalIn)}</div><div class="sc-lbl">Total Cash In</div></div>
+    <div class="sc"><div class="sc-val" style="color:#c0392b">${fmt(rptData.totalOut)}</div><div class="sc-lbl">Total Cash Out</div></div>
     <div class="sc"><div class="sc-val">${rptData.days.length}</div><div class="sc-lbl">Days</div></div>
-    <div class="sc"><div class="sc-val blue">${rptData.matchCount || 0}</div><div class="sc-lbl">Drawer Match</div></div>
+    <div class="sc"><div class="sc-val" style="color:#2563eb">${rptData.matchCount || 0}</div><div class="sc-lbl">Drawer Match</div></div>
     <div class="sc"><div class="sc-val" style="color:#b45309">${rptData.overCount || 0}</div><div class="sc-lbl">Over</div></div>
-    <div class="sc"><div class="sc-val red">${rptData.shortCount || 0}</div><div class="sc-lbl">Short</div></div>
+    <div class="sc"><div class="sc-val" style="color:#c0392b">${rptData.shortCount || 0}</div><div class="sc-lbl">Short</div></div>
   </div>
-
-  <div class="chart-wrap">
-    <div class="section-title">Daily Cash In vs Cash Out</div>
-    <div class="legend">
-      <div class="leg"><div class="leg-dot" style="background:#2db67d"></div>Cash In</div>
-      <div class="leg"><div class="leg-dot" style="background:#e05252"></div>Cash Out</div>
-    </div>
-    <div class="chart">${chartBars}</div>
+  <div class="section-title">Daily Cash In vs Cash Out</div>
+  <div style="display:flex;gap:16px;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#666"><div style="width:10px;height:10px;border-radius:2px;background:#2db67d"></div>Cash In</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#666"><div style="width:10px;height:10px;border-radius:2px;background:#e05252"></div>Cash Out</div>
   </div>
-
+  <div class="chart">${chartBars}</div>
   <div class="section-title">Daily Breakdown</div>
-  <table>
-    <thead><tr><th>Date</th><th>Cash In</th><th>Txn</th><th>Cash Out</th><th>Opening</th><th>Closing</th><th>Drawer</th></tr></thead>
-    <tbody>${tableRows}</tbody>
-  </table>
-
-  ${byPersonRows ? `
-  <div class="section-title">Cash Out by Person</div>
-  <table>
-    <thead><tr><th>Name</th><th>Total</th></tr></thead>
-    <tbody>${byPersonRows}</tbody>
-  </table>` : ''}
-
-  <div class="footer">
-    <strong>Choices For You</strong> · Cash Manager<br/>
-    Built by Abdo Alasaadi · Report generated ${new Date().toLocaleDateString()}
-  </div>
-</body>
-</html>`;
-
+  <table><thead><tr><th>Date</th><th>Cash In</th><th>Txn</th><th>Cash Out</th><th>Opening</th><th>Closing</th><th>Drawer</th></tr></thead><tbody>${tableRows}</tbody></table>
+  ${byPersonRows ? `<div class="section-title">Cash Out by Person</div><table><thead><tr><th>Name</th><th>Total</th></tr></thead><tbody>${byPersonRows}</tbody></table>` : ''}
+  <div class="footer"><strong>Choices For You</strong> · Cash Manager<br/>Built by Abdo Alasaadi · Report generated ${new Date().toLocaleDateString()}</div>
+</body></html>`;
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
-    setTimeout(() => {
-      win.print();
-      setPdfLoading(false);
-    }, 800);
+    setTimeout(() => { win.print(); setPdfLoading(false); }, 800);
   };
 
-  // ── LOGIN ──
   if (!user) return (
     <div style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: "'Inter',-apple-system,sans-serif", minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
       <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 24, padding: '32px 20px', width: '100%', maxWidth: 400 }}>
@@ -378,89 +370,88 @@ const [rptProgress, setRptProgress] = useState(0);
       {page === 'today' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>● Live · Today</div>
-{dashLoading && (
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}>
-    <RamLoader />
-    <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
-  </div>
-)}
-{!dashLoading && (
-  <>
-<div style={{ position: 'sticky', top: 56, zIndex: 39, background: C.bg, paddingBottom: 4 }}>
-  <div style={{ background: 'linear-gradient(135deg, rgba(212,168,67,.2), rgba(212,168,67,.05))', border: `1px solid rgba(212,168,67,.4)`, borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-    <div>
-      <div style={{ fontSize: 10, color: C.gold, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>Expected in Drawer</div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
-    </div>
-    <div style={{ textAlign: 'right' }}>
-      <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
-        {fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} − {fmt(dash?.cashOut)}
-      </div>
-      {diff !== null && (
-        <div style={{ fontSize: 13, fontWeight: 700, padding: '5px 10px', borderRadius: 8, background: Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
-          {Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)} Over` : `${fmt(diff)} Short`}
+
+          {dashLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
+              <RamLoader />
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
+            </div>
+          ) : (
+            <>
+              <div style={{ position: 'sticky', top: 56, zIndex: 39, background: C.bg, paddingBottom: 4 }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(212,168,67,.2), rgba(212,168,67,.05))', border: '1px solid rgba(212,168,67,.4)', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: C.gold, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>Expected in Drawer</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>{fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} − {fmt(dash?.cashOut)}</div>
+                    {diff !== null && (
+                      <div style={{ fontSize: 13, fontWeight: 700, padding: '5px 10px', borderRadius: 8, background: Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
+                        {Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)} Over` : `${fmt(diff)} Short`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <MC label="Cash In" value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn || 0} transactions`} c1="rgba(45,182,125,.15)" c2="#2db67d" />
+                <MC label="Cash Out" value={fmt(dash?.cashOut)} sub={`${dash?.cashOutEntries?.length || 0} entries`} c1="rgba(224,82,82,.15)" c2="#e05252" />
+                <MC label="Opening" value={fmt(dash?.openingAmount)} sub={dash?.openingAmount > 0 ? 'set today' : 'not set'} c1="rgba(91,138,240,.15)" c2="#5b8af0" />
+                <MC label="Closing" value={dash?.closingAmount > 0 ? fmt(dash.closingAmount) : '—'} sub="end of day" c1="rgba(212,168,67,.15)" c2="#d4a843" />
+              </div>
+
+              <div style={card}>
+                <div style={{ textAlign: 'center', background: C.surf2, borderRadius: 14, padding: '18px 12px' }}>
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>Expected in Drawer</div>
+                  <div style={{ fontSize: 40, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>{fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} − {fmt(dash?.cashOut)}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Actual $</span>
+                  <input style={{ flex: 1, minWidth: 0, background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: '#fff', fontSize: 18, padding: '12px 14px', outline: 'none', fontFamily: 'inherit' }} type="number" placeholder="0.00" inputMode="decimal" value={actual} onChange={e => setActual(e.target.value)} />
+                  <div style={{ fontSize: 13, fontWeight: 700, padding: '9px 12px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0, background: diff === null ? C.surf2 : Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: diff === null ? C.muted : Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
+                    {diff === null ? '—' : Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div style={fld}><label style={flbl}>Opening ($)</label><input style={inp} type="number" placeholder="200.00" inputMode="decimal" value={openingAmt} onChange={e => setOpeningAmt(e.target.value)} /></div>
+                  <div style={fld}><label style={flbl}>Closing ($)</label><input style={inp} type="number" placeholder="850.00" inputMode="decimal" value={closingAmt} onChange={e => setClosingAmt(e.target.value)} /></div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button style={btnG} onClick={() => saveDrawer('opening')}>Set Opening</button>
+                  <button style={btnG} onClick={() => saveDrawer('closing')}>Set Closing</button>
+                </div>
+              </div>
+
+              <div style={card}>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>Today's Cash Out</div>
+                {!dash?.cashOutEntries?.length
+                  ? <div style={{ textAlign: 'center', padding: 20, color: C.muted, fontSize: 14 }}>No entries yet today.</div>
+                  : <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 320 }}>
+                        <thead><tr>{['Time','Who','Amount','Reason', user.role==='admin' ? '' : null].filter(h => h !== null).map((h,i) => <th key={i} style={{ background: C.surf2, color: C.muted, fontSize: 11, letterSpacing: 1, padding: '10px 12px', textAlign: 'left', textTransform: 'uppercase', borderBottom: `1px solid ${C.bord}`, whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
+                        <tbody>{dash.cashOutEntries.map((e, i) => (
+                          <tr key={i}>
+                            <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.time}</td>
+                            <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)` }}>{e.who}</td>
+                            <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</td>
+                            <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted }}>{e.reason}</td>
+                            {user.role === 'admin' && <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)` }}><button onClick={() => delEntry(e.rowIndex)} style={{ background: 'none', border: `1px solid ${C.bord}`, borderRadius: 6, color: C.muted, cursor: 'pointer', fontSize: 12, padding: '4px 8px' }}>✕</button></td>}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>}
+              </div>
+
+              <div style={{ textAlign: 'center', padding: 14, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
+                Built by <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />Need help? Contact me
+              </div>
+            </>
+          )}
         </div>
       )}
-    </div>
-  </div>
-</div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <MC label="Cash In" value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn || 0} transactions`} c1="rgba(45,182,125,.15)" c2="#2db67d" />
-            <MC label="Cash Out" value={fmt(dash?.cashOut)} sub={`${dash?.cashOutEntries?.length || 0} entries`} c1="rgba(224,82,82,.15)" c2="#e05252" />
-            <MC label="Opening" value={fmt(dash?.openingAmount)} sub={dash?.openingAmount > 0 ? 'set today' : 'not set'} c1="rgba(91,138,240,.15)" c2="#5b8af0" />
-            <MC label="Closing" value={dash?.closingAmount > 0 ? fmt(dash.closingAmount) : '—'} sub="end of day" c1="rgba(212,168,67,.15)" c2="#d4a843" />
-          </div>
-
-          <div style={card}>
-            <div style={{ textAlign: 'center', background: C.surf2, borderRadius: 14, padding: '18px 12px' }}>
-              <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>Expected in Drawer</div>
-              <div style={{ fontSize: 40, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>{fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} − {fmt(dash?.cashOut)}</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Actual $</span>
-              <input style={{ flex: 1, minWidth: 0, background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: '#fff', fontSize: 18, padding: '12px 14px', outline: 'none', fontFamily: 'inherit' }} type="number" placeholder="0.00" inputMode="decimal" value={actual} onChange={e => setActual(e.target.value)} />
-              <div style={{ fontSize: 13, fontWeight: 700, padding: '9px 12px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0, background: diff === null ? C.surf2 : Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: diff === null ? C.muted : Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
-                {diff === null ? '—' : Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div style={fld}><label style={flbl}>Opening ($)</label><input style={inp} type="number" placeholder="200.00" inputMode="decimal" value={openingAmt} onChange={e => setOpeningAmt(e.target.value)} /></div>
-              <div style={fld}><label style={flbl}>Closing ($)</label><input style={inp} type="number" placeholder="850.00" inputMode="decimal" value={closingAmt} onChange={e => setClosingAmt(e.target.value)} /></div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button style={btnG} onClick={() => saveDrawer('opening')}>Set Opening</button>
-              <button style={btnG} onClick={() => saveDrawer('closing')}>Set Closing</button>
-            </div>
-          </div>
-
-          <div style={card}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>Today's Cash Out</div>
-            {!dash?.cashOutEntries?.length
-              ? <div style={{ textAlign: 'center', padding: 20, color: C.muted, fontSize: 14 }}>No entries yet today.</div>
-              : <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 320 }}>
-                    <thead><tr>{['Time','Who','Amount','Reason', user.role==='admin' ? '' : null].filter(h => h !== null).map((h,i) => <th key={i} style={{ background: C.surf2, color: C.muted, fontSize: 11, letterSpacing: 1, padding: '10px 12px', textAlign: 'left', textTransform: 'uppercase', borderBottom: `1px solid ${C.bord}`, whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
-                    <tbody>{dash.cashOutEntries.map((e, i) => (
-                      <tr key={i}>
-                        <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.time}</td>
-                        <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)` }}>{e.who}</td>
-                        <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</td>
-                        <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted }}>{e.reason}</td>
-                        {user.role === 'admin' && <td style={{ padding: '11px 12px', borderBottom: `1px solid rgba(255,255,255,.05)` }}><button onClick={() => delEntry(e.rowIndex)} style={{ background: 'none', border: `1px solid ${C.bord}`, borderRadius: 6, color: C.muted, cursor: 'pointer', fontSize: 12, padding: '4px 8px' }}>✕</button></td>}
-                      </tr>
-                    ))}</tbody>
-                  </table>
-                </div>}
-          </div>
-          <div style={{ textAlign: 'center', padding: 14, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
-            Built by <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />Need help? Contact me
-
-        </>
-    )}
-  </div>
-)}
 
       {/* CASH OUT */}
       {page === 'cashout' && (
@@ -505,22 +496,22 @@ const [rptProgress, setRptProgress] = useState(0);
           <button style={btn} onClick={loadReport}>Pull Report</button>
 
           {rptLoading && (
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}>
-    <RamLoader />
-    <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
-  </div>
-)}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
+              <RamLoader />
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
+            </div>
+          )}
 
           {rptData && !rptLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} ref={reportRef}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
                 {[
-                  ['Cash In',  fmt(rptData.totalIn),               C.gold],
-                  ['Cash Out', fmt(rptData.totalOut),              C.red],
-                  ['Days',     String(rptData.days?.length ?? 0),  C.blue],
-                  ['Over',     String(rptData.overCount  ?? 0),    '#ffd166'],
-                  ['Short',    String(rptData.shortCount ?? 0),    C.red],
-                  ['Match',    String(rptData.matchCount ?? 0),    C.green],
+                  ['Cash In',  fmt(rptData.totalIn),              C.gold],
+                  ['Cash Out', fmt(rptData.totalOut),             C.red],
+                  ['Days',     String(rptData.days?.length ?? 0), C.blue],
+                  ['Over',     String(rptData.overCount  ?? 0),   '#ffd166'],
+                  ['Short',    String(rptData.shortCount ?? 0),   C.red],
+                  ['Match',    String(rptData.matchCount ?? 0),   C.green],
                 ].map(([l,v,c]) => (
                   <div key={l} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 18, fontWeight: 700, color: c }}>{v}</div>
@@ -552,34 +543,30 @@ const [rptProgress, setRptProgress] = useState(0);
                   </table>
                 </div>
               )}
-{rptData.cashOutEntries && rptData.cashOutEntries.length > 0 && (
-  <div style={card}>
-    <div style={{ fontSize: 16, fontWeight: 700 }}>Cash Out Entries</div>
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 380 }}>
-        <thead>
-          <tr>
-            {['Date','Time','Who','Amount','Reason','Note'].map(h => (
-              <th key={h} style={{ background: C.surf2, color: C.muted, fontSize: 11, letterSpacing: 1, padding: '10px 12px', textAlign: 'left', textTransform: 'uppercase', borderBottom: `1px solid ${C.bord}`, whiteSpace: 'nowrap' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rptData.cashOutEntries.map((e, i) => (
-            <tr key={i}>
-              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.date}</td>
-              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.time}</td>
-              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)` }}>{e.who}</td>
-              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</td>
-              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted }}>{e.reason}</td>
-              <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.note || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+
+              {rptData.cashOutEntries && rptData.cashOutEntries.length > 0 && (
+                <div style={card}>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>Cash Out Entries</div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 380 }}>
+                      <thead><tr>{['Date','Time','Who','Amount','Reason','Note'].map(h => (
+                        <th key={h} style={{ background: C.surf2, color: C.muted, fontSize: 11, letterSpacing: 1, padding: '10px 12px', textAlign: 'left', textTransform: 'uppercase', borderBottom: `1px solid ${C.bord}`, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}</tr></thead>
+                      <tbody>{rptData.cashOutEntries.map((e, i) => (
+                        <tr key={i}>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.date}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.time}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)` }}>{e.who}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted }}>{e.reason}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid rgba(255,255,255,.05)`, color: C.muted, fontSize: 12 }}>{e.note || '—'}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <button style={{ ...btn, background: '#1a1a20', border: `1px solid ${C.bord}`, color: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={exportPDF} disabled={pdfLoading}>
                 {pdfLoading ? 'Generating...' : '📄 Export PDF'}
               </button>
@@ -643,46 +630,6 @@ const [rptProgress, setRptProgress] = useState(0);
       )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
-
-function RamLoader({ progress = null }) {
-  const [fakeP, setFakeP] = useState(0);
-  const progRef = useRef(0);
-  const rafRef = useRef(null);
-
-  useEffect(() => {
-    if (progress !== null) return;
-    const animate = () => {
-      progRef.current = Math.min(progRef.current + 0.4, 90);
-      setFakeP(progRef.current);
-      if (progRef.current < 90) rafRef.current = requestAnimationFrame(animate);
-    };
-useEffect(() => {
-  try {
-    const saved = sessionStorage.getItem('cashUser');
-    if (saved) setUser(JSON.parse(saved));
-  } catch(e) {}
-}, []);
-
-    rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [progress]);
-
-  const prog = progress !== null ? progress : fakeP;
-  const p = prog / 100;
-  const eyeOpacity = prog >= 85 ? (prog - 85) / 15 : 0;
-  const glowOpacity = 0.3 + p * 0.7;
-
-  return (
-    <div style={{ position: 'relative', width: 140, height: 140 }}>
-      <img src="/logo.png" alt="Loading" style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, objectFit: 'contain', opacity: 0.15, filter: 'brightness(0) invert(1)' }} />
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, overflow: 'hidden', clipPath: `inset(${100 - prog}% 0 0 0)`, transition: 'clip-path 0.1s linear' }}>
-        <img src="/logo.png" alt="" style={{ width: 140, height: 140, objectFit: 'contain', filter: `brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(${glowOpacity + 0.5})` }} />
-      </div>
-      <div style={{ position: 'absolute', top: `${100 - prog - 5}%`, left: 0, right: 0, height: '12%', background: 'linear-gradient(to bottom, transparent, rgba(212,168,67,0.4), transparent)', pointerEvents: 'none', opacity: prog > 5 ? 1 : 0 }} />
-      {eyeOpacity > 0 && <div style={{ position: 'absolute', top: '35%', left: '55%', width: 16, height: 16, borderRadius: '50%', background: '#d4a843', opacity: eyeOpacity * 0.7, filter: 'blur(6px)', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />}
     </div>
   );
 }
