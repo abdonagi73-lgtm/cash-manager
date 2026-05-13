@@ -61,31 +61,32 @@ function Chart({ days }) {
 
 function RamLoader() {
   const [prog, setProg] = useState(0);
+  const dirRef = useRef(1);
   const progRef = useRef(0);
   const rafRef = useRef(null);
 
   useEffect(() => {
     const animate = () => {
-      progRef.current = Math.min(progRef.current + 0.4, 90);
+      progRef.current += dirRef.current * 0.6;
+      if (progRef.current >= 95) { dirRef.current = -1; }
+      if (progRef.current <= 5)  { dirRef.current =  1; }
       setProg(progRef.current);
-      if (progRef.current < 90) rafRef.current = requestAnimationFrame(animate);
+      rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
   const p = prog / 100;
-  const eyeOpacity = prog >= 85 ? (prog - 85) / 15 : 0;
-  const glowOpacity = 0.3 + p * 0.7;
+  const glowOpacity = 0.4 + p * 0.6;
 
   return (
     <div style={{ position: 'relative', width: 140, height: 140 }}>
-      <img src="/logo.png" alt="Loading" style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, objectFit: 'contain', opacity: 0.15, filter: 'brightness(0) invert(1)' }} />
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, overflow: 'hidden', clipPath: `inset(${100 - prog}% 0 0 0)`, transition: 'clip-path 0.1s linear' }}>
+      <img src="/logo.png" alt="Loading" style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, objectFit: 'contain', opacity: 0.12, filter: 'brightness(0) invert(1)' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 140, overflow: 'hidden', clipPath: `inset(${100 - prog}% 0 0 0)` }}>
         <img src="/logo.png" alt="" style={{ width: 140, height: 140, objectFit: 'contain', filter: `brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(${glowOpacity + 0.5})` }} />
       </div>
-      <div style={{ position: 'absolute', top: `${100 - prog - 5}%`, left: 0, right: 0, height: '12%', background: 'linear-gradient(to bottom, transparent, rgba(212,168,67,0.4), transparent)', pointerEvents: 'none', opacity: prog > 5 ? 1 : 0 }} />
-      {eyeOpacity > 0 && <div style={{ position: 'absolute', top: '35%', left: '55%', width: 16, height: 16, borderRadius: '50%', background: '#d4a843', opacity: eyeOpacity * 0.7, filter: 'blur(6px)', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }} />}
+      <div style={{ position: 'absolute', top: `${100 - prog - 4}%`, left: 0, right: 0, height: '10%', background: 'linear-gradient(to bottom, transparent, rgba(212,168,67,0.5), transparent)', pointerEvents: 'none' }} />
     </div>
   );
 }
