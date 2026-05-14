@@ -1,9 +1,52 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+const LANG = {
+  en: {
+    title: 'Choices For You', sub: 'Business Manager', enterPin: 'Enter your PIN to sign in',
+    today: 'Today', cashOut: 'Cash Out', employees: 'Employees', reports: 'Reports',
+    liveToday: '● Live · Today', expectedDrawer: 'Expected in Drawer',
+    cashSales: 'Cash Sales', cardSales: 'Card Sales', manualOut: 'Manual Cash Out',
+    posInOut: 'POS In/Out', opening: 'Opening', closing: 'Closing', actualDollar: 'Actual $',
+    setOpening: 'Set Opening', setClosing: 'Set Closing', todayCashOut: "Today's Cash Out",
+    fullHistory: 'Full History', noEntries: 'No entries yet today.', signOut: 'Sign out',
+    reportCashOut: 'Report Cash Out', newEntry: 'New Entry', who: 'Who', amount: 'Amount ($)',
+    reason: 'Reason', note: 'Note (optional)', reviewSubmit: 'Review & Submit',
+    empHours: 'Employee Hours & Pay', loadHours: 'Load Hours', totalHours: 'Total Hours',
+    totalPay: 'Total Pay', reportsHistory: 'Reports & History', pullReport: 'Pull Report',
+    exportPDF: '📄 Export PDF', builtBy: 'Built by', needHelp: 'Need help? Contact me',
+    todayPL: "Today's P&L", lowDrawerAlert: 'Low Drawer Alert', lowDrawerSub: 'Expected drawer is below $100',
+    loading: 'Loading...', confirmCashOut: 'Confirm Cash Out', reviewBefore: 'Review before submitting.',
+    cancel: 'Cancel', submit: 'Submit', done: 'Done!', close: 'Close', selectName: 'Select name...',
+    selectReason: 'Select reason...', hoursWorked: 'Hours Worked', addDetails: 'Add details...',
+    notSet: 'not set', setToday: 'set today', endOfDay: 'end of day', transactions: 'transactions',
+    entries: 'entries', fromSquare: 'from square pos', recentCashOut: 'Recent Cash Out', viewAll: 'View All',
+  },
+  ar: {
+    title: 'خيارات لك', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
+    today: 'اليوم', cashOut: 'صرف نقدي', employees: 'الموظفون', reports: 'التقارير',
+    liveToday: '● مباشر · اليوم', expectedDrawer: 'المتوقع في الصندوق',
+    cashSales: 'مبيعات نقدية', cardSales: 'مبيعات بطاقة', manualOut: 'صرف يدوي',
+    posInOut: 'نقدي داخل/خارج', opening: 'الافتتاح', closing: 'الإغلاق', actualDollar: 'الفعلي $',
+    setOpening: 'تعيين الافتتاح', setClosing: 'تعيين الإغلاق', todayCashOut: 'الصرف النقدي اليوم',
+    fullHistory: 'السجل الكامل', noEntries: 'لا توجد مدخلات اليوم.', signOut: 'تسجيل الخروج',
+    reportCashOut: 'تسجيل صرف نقدي', newEntry: 'مدخل جديد', who: 'من', amount: 'المبلغ ($)',
+    reason: 'السبب', note: 'ملاحظة (اختياري)', reviewSubmit: 'مراجعة وإرسال',
+    empHours: 'ساعات الموظفين والأجر', loadHours: 'تحميل الساعات', totalHours: 'إجمالي الساعات',
+    totalPay: 'إجمالي الأجر', reportsHistory: 'التقارير والسجل', pullReport: 'عرض التقرير',
+    exportPDF: '📄 تصدير PDF', builtBy: 'بناء بواسطة', needHelp: 'تحتاج مساعدة؟ تواصل معي',
+    todayPL: 'ربح وخسارة اليوم', lowDrawerAlert: 'تنبيه: رصيد منخفض', lowDrawerSub: 'المتوقع في الصندوق أقل من 100$',
+    loading: 'جار التحميل...', confirmCashOut: 'تأكيد الصرف النقدي', reviewBefore: 'راجع قبل الإرسال.',
+    cancel: 'إلغاء', submit: 'إرسال', done: 'تم!', close: 'إغلاق', selectName: 'اختر الاسم...',
+    selectReason: 'اختر السبب...', hoursWorked: 'ساعات العمل', addDetails: 'أضف تفاصيل...',
+    notSet: 'غير محدد', setToday: 'محدد اليوم', endOfDay: 'نهاية اليوم', transactions: 'معاملات',
+    entries: 'مدخلات', fromSquare: 'من نقطة البيع', recentCashOut: 'الصرف الأخير', viewAll: 'عرض الكل',
+  }
+};
+
 
 const PINS = {
   Abdo:  { pin: '5436', role: 'admin' },
-  Fares: { pin: '1503', role: 'team' },
+  Fares: { pin: '1503', role: 'admin' },
   Assim: { pin: '1738', role: 'team' },
   Kamal: { pin: '9990', role: 'team' },
 };
@@ -104,12 +147,17 @@ function DateRange({ start, end, onStart, onEnd, presets = true }) {
 }
 
 export default function App() {
+
+const [lang, setLang] = useState('en');
+const t = LANG[lang];
+const isAr = lang === 'ar';
   const C = {
     bg: '#0f0f12', surf: '#1a1a20', surf2: '#22222a',
     bord: 'rgba(255,255,255,.08)', gold: '#d4a843',
     green: '#2db67d', red: '#e05252', blue: '#5b8af0',
     purple: '#a855f7', muted: '#888',
   };
+
   const inp = { background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 12, color: '#fff', fontSize: 16, padding: '14px 16px', width: '100%', outline: 'none', fontFamily: 'inherit', appearance: 'none', WebkitAppearance: 'none' };
   const btn = { display: 'block', width: '100%', background: C.gold, border: 'none', borderRadius: 14, color: '#0f0f12', fontSize: 16, fontWeight: 700, padding: 16, textAlign: 'center', cursor: 'pointer', fontFamily: 'inherit' };
   const btnG = { ...btn, background: C.surf2, border: `1px solid ${C.bord}`, color: '#fff', fontWeight: 500, padding: 14 };
@@ -214,8 +262,7 @@ export default function App() {
     const pval = p || pin;
     if (pval.length < 4) { setLoginErr('Enter your 4-digit PIN.'); return; }
     const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
-    if (!match) { setLoginErr('Incorrect PIN. Try again.'); setPin(''); return; }
-    const userData = { name: match[0], role: match[1].role };
+if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'); setPin(''); return; }    const userData = { name: match[0], role: match[1].role };
     sessionStorage.setItem('cashUser', JSON.stringify(userData));
     setUser(userData); setLoginErr(''); setPin('');
   };
@@ -294,7 +341,7 @@ export default function App() {
     : [['today','🏠','Today'],['cashout','💸','Cash Out']];
 
   return (
-    <div style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: "'Inter',-apple-system,sans-serif", minHeight: '100vh', fontSize: 16 }}>
+   <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', fontSize: 16 }}>
 
       {/* TOPBAR */}
       <div style={{ background: C.surf, borderBottom: `1px solid ${C.bord}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 56, position: 'sticky', top: 0, zIndex: 40 }}>
@@ -307,7 +354,8 @@ export default function App() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontSize: 12, color: C.muted, background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 20, padding: '5px 12px' }}>{user.name}{user.role === 'admin' ? ' ★' : ''}</div>
-          <button onClick={logout} style={{ background: 'none', border: `1px solid ${C.bord}`, color: C.muted, fontSize: 13, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>Sign out</button>
+          <button onClick={() => setLang(l => l === 'en' ? 'ar' : 'en')} style={{ background: 'none', border: `1px solid ${C.bord}`, color: C.muted, fontSize: 13, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>{lang === 'en' ? 'ع' : 'EN'}</button>
+<button onClick={logout} style={{ background: 'none', border: `1px solid ${C.bord}`, color: C.muted, fontSize: 13, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>{t.signOut}</button>
         </div>
       </div>
 
