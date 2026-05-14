@@ -295,7 +295,7 @@ export default function App() {
 sessionStorage.setItem('cashUser', JSON.stringify(userData));
 setUser(userData); setLoginErr(''); setPin('');
 if (match[0] === 'Fares') setFaresVideo(true);
-  };
+};
   const logout = () => { sessionStorage.removeItem('cashUser'); setUser(null); setPin(''); setPage('today'); setDash(null); };
 
   const expectedInDrawer = dash ? (dash.openingAmount + dash.cashIn + (dash.drawerCashIn||0) - dash.cashOut - (dash.drawerCashOut||0)) : 0;
