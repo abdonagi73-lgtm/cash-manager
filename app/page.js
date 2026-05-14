@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 const [pinAlert, setPinAlert] = useState(false);
+const [faresVideo, setFaresVideo] = useState(false);
 
 const LANG = {
   en: {
@@ -291,8 +292,9 @@ export default function App() {
     const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
     if (!match) { setPinAlert(true); setPin(''); return; }
     const userData = { name: match[0], role: match[1].role };
-    sessionStorage.setItem('cashUser', JSON.stringify(userData));
-    setUser(userData); setLoginErr(''); setPin('');
+sessionStorage.setItem('cashUser', JSON.stringify(userData));
+setUser(userData); setLoginErr(''); setPin('');
+if (match[0] === 'Fares') setFaresVideo(true);
   };
   const logout = () => { sessionStorage.removeItem('cashUser'); setUser(null); setPin(''); setPage('today'); setDash(null); };
 
@@ -919,4 +921,19 @@ export default function App() {
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
+{/* FARES VIDEO */}
+{faresVideo && (
+  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.95)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    onClick={() => setFaresVideo(false)}>
+    <video
+      src="/fares.mp4"
+      autoPlay
+      playsInline
+      muted={false}
+      style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: 16 }}
+      onEnded={() => setFaresVideo(false)}
+    />
+  </div>
+)}
 }
+
