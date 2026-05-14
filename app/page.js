@@ -35,7 +35,7 @@ const LANG = {
     builtByFull: 'Built by', contactMe: 'Need help? Contact me',
   },
   ar: {
-    title: 'خيارات لك', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
+    title: CHOICES FOR YOU', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
     today: 'اليوم', cashOut: 'صرف نقدي', employees: 'الموظفون', reports: 'التقارير',
     liveToday: '● مباشر · اليوم', expectedDrawer: 'المتوقع في الصندوق',
     cashSales: 'مبيعات نقدية', cardSales: 'مبيعات بطاقة', manualOut: 'صرف يدوي',
@@ -64,7 +64,7 @@ const LANG = {
     closingDollar: 'الإغلاق ($)', salesLabel: 'المبيعات:', cashOutLabel: 'الصرف:', posOutLabel: 'خارج POS:',
     whoLabel: 'من', amountLabel: 'المبلغ', reasonLabel: 'السبب', noteLabel: 'ملاحظة',
     tapHistory: 'اضغط للسجل ›', remove: '✕', confirm: 'تأكيد الصرف النقدي',
-    builtByFull: 'بناء بواسطة', contactMe: 'تحتاج مساعدة؟ تواصل معي',
+    builtByFull: ' بواسطة', contactMe: 'تحتاج مساعدة؟ تواصل معي',
   }
 };
 
