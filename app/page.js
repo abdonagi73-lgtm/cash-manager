@@ -1,7 +1,5 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-const [pinAlert, setPinAlert] = useState(false);
-const [faresVideo, setFaresVideo] = useState(false);
 
 const LANG = {
   en: {
@@ -37,7 +35,7 @@ const LANG = {
     builtByFull: 'Built by', contactMe: 'Need help? Contact me',
   },
   ar: {
-    title: Choices For You', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
+    title: 'Choices For You', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
     today: 'اليوم', cashOut: 'صرف نقدي', employees: 'الموظفون', reports: 'التقارير',
     liveToday: '● مباشر · اليوم', expectedDrawer: 'المتوقع في الصندوق',
     cashSales: 'مبيعات نقدية', cardSales: 'مبيعات بطاقة', manualOut: 'صرف يدوي',
@@ -66,7 +64,7 @@ const LANG = {
     closingDollar: 'الإغلاق ($)', salesLabel: 'المبيعات:', cashOutLabel: 'الصرف:', posOutLabel: 'خارج POS:',
     whoLabel: 'من', amountLabel: 'المبلغ', reasonLabel: 'السبب', noteLabel: 'ملاحظة',
     tapHistory: 'اضغط للسجل ›', remove: '✕', confirm: 'تأكيد الصرف النقدي',
-    builtByFull: ' بواسطة', contactMe: 'تحتاج مساعدة؟ تواصل معي',
+    builtByFull: 'بناء بواسطة', contactMe: 'تحتاج مساعدة؟ تواصل معي',
   }
 };
 
@@ -228,6 +226,8 @@ export default function App() {
   const [empData, setEmpData] = useState(null);
   const [empLoading, setEmpLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pinAlert, setPinAlert] = useState(false);
+  const [faresVideo, setFaresVideo] = useState(false);
   const lowDrawerThreshold = 100;
 
   const showToast = (msg, type = 'ok') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
@@ -244,21 +244,19 @@ export default function App() {
   }, [user, loadDash]);
 
   useEffect(() => {
-  try {
-    const s = sessionStorage.getItem('cashUser');
-    if (s) {
-      const u = JSON.parse(s);
-      setUser(u);
-      if (u.name === 'Fares') setFaresVideo(true);
-    }
-  } catch(e) {}
-}, []);
+    try {
+      const s = sessionStorage.getItem('cashUser');
+      if (s) {
+        const u = JSON.parse(s);
+        setUser(u);
+        if (u.name === 'Fares') setFaresVideo(true);
+      }
+    } catch(e) {}
+  }, []);
 
   const openDetailSheet = (type) => {
-    setActiveSheet(type);
-    setSheetData(null);
-    setSheetLoading(true);
-    const action = type === 'cashout' ? 'getCashOutHistory' : type === 'sales' ? 'getSalesHistory' : type === 'pos' ? 'getPOSHistory' : 'getCashOutHistory';
+    setActiveSheet(type); setSheetData(null); setSheetLoading(true);
+    const action = type === 'cashout' ? 'getCashOutHistory' : type === 'sales' ? 'getSalesHistory' : 'getPOSHistory';
     callScript(action, { start: sheetStart, end: sheetEnd })
       .then(d => { setSheetData(d); setSheetLoading(false); })
       .catch(() => { showToast('Error loading', 'err'); setSheetLoading(false); });
@@ -293,16 +291,18 @@ export default function App() {
     const np = pin + k; setPin(np);
     if (np.length === 4) setTimeout(() => doLogin(np), 180);
   };
+
   const doLogin = (p) => {
     const pval = p || pin;
     if (pval.length < 4) { setLoginErr(isAr ? 'أدخل رقم PIN المكون من 4 أرقام.' : 'Enter your 4-digit PIN.'); return; }
     const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
     if (!match) { setPinAlert(true); setPin(''); return; }
     const userData = { name: match[0], role: match[1].role };
-sessionStorage.setItem('cashUser', JSON.stringify(userData));
-setUser(userData); setLoginErr(''); setPin('');
-if (match[0] === 'Fares') setFaresVideo(true);
-};
+    sessionStorage.setItem('cashUser', JSON.stringify(userData));
+    setUser(userData); setLoginErr(''); setPin('');
+    if (match[0] === 'Fares') setFaresVideo(true);
+  };
+
   const logout = () => { sessionStorage.removeItem('cashUser'); setUser(null); setPin(''); setPage('today'); setDash(null); };
 
   const expectedInDrawer = dash ? (dash.openingAmount + dash.cashIn + (dash.drawerCashIn||0) - dash.cashOut - (dash.drawerCashOut||0)) : 0;
@@ -316,6 +316,7 @@ if (match[0] === 'Fares') setFaresVideo(true);
       .then(() => { showToast(`${type === 'opening' ? t.opening : t.closing} → ${fmt(val)}`); loadDash(); })
       .catch(() => showToast('Error', 'err'));
   };
+
   const confirmOut = () => {
     if (!outWho) { showToast(isAr ? 'اختر الاسم.' : 'Select who.', 'err'); return; }
     if (!outAmt || parseFloat(outAmt) <= 0) { showToast(isAr ? 'أدخل مبلغاً صحيحاً.' : 'Enter a valid amount.', 'err'); return; }
@@ -326,6 +327,7 @@ if (match[0] === 'Fares') setFaresVideo(true);
     setPending({ who: outWho, amt: parseFloat(outAmt), reason: outReason, note });
     setConfirmSheet(true);
   };
+
   const submitOut = () => {
     setConfirmSheet(false); if (!pending) return;
     callScript('logCashOut', { who: pending.who, amount: pending.amt, reason: pending.reason, note: pending.note || '' })
@@ -337,6 +339,7 @@ if (match[0] === 'Fares') setFaresVideo(true);
       })
       .catch(() => showToast('Error submitting.', 'err'));
   };
+
   const delEntry = (rowIndex) => {
     if (!confirm(isAr ? 'حذف هذا المدخل؟' : 'Remove this entry?')) return;
     callScript('deleteCashOut', { rowIndex })
@@ -344,7 +347,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
       .catch(() => showToast('Error', 'err'));
   };
 
-  // ── LOGIN ──
   if (!user) return (
     <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
       <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 24, padding: '32px 20px', width: '100%', maxWidth: 400 }}>
@@ -374,6 +376,20 @@ if (match[0] === 'Fares') setFaresVideo(true);
           {t.builtByFull} <strong style={{ color: C.gold }}>{isAr ? 'عبده الاسعدي' : 'Abdo Alasaadi'}</strong><br />{t.contactMe}
         </div>
       </div>
+      {pinAlert && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}>
+          <div style={{ background: '#1a1a20', border: '1px solid rgba(224,82,82,.4)', borderRadius: 24, padding: '32px 24px', width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
+            <div style={{ fontSize: 48 }}>🔒</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#e05252' }}>{isAr ? 'رقم غير موجود' : 'Access Denied'}</div>
+            <div style={{ fontSize: 14, color: '#888', lineHeight: 1.6 }}>
+              {isAr ? 'هذا الرقم غير موجود في النظام.\nيرجى التواصل مع عبده الاسعدي للحصول على الصلاحية.' : 'This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'}
+            </div>
+            <button onClick={() => setPinAlert(false)} style={{ background: '#d4a843', border: 'none', borderRadius: 14, color: '#0f0f12', fontSize: 16, fontWeight: 700, padding: '14px 40px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 8 }}>
+              {isAr ? 'حسناً' : 'OK'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -384,7 +400,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
   return (
     <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', fontSize: 16 }}>
 
-      {/* TOPBAR */}
       <div style={{ background: C.surf, borderBottom: `1px solid ${C.bord}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 56, position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', background: '#111', borderRadius: 8, padding: 3 }} />
@@ -400,11 +415,9 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </div>
       </div>
 
-      {/* ── TODAY ── */}
       {page === 'today' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.liveToday}</div>
-
           {dashLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
               <RamLoader />
@@ -421,7 +434,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   </div>
                 </div>
               )}
-
               <div style={{ position: 'sticky', top: 56, zIndex: 39, background: C.bg, paddingBottom: 4 }}>
                 <div style={{ background: 'linear-gradient(135deg, rgba(212,168,67,.2), rgba(212,168,67,.05))', border: '1px solid rgba(212,168,67,.4)', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
@@ -438,7 +450,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   </div>
                 </div>
               </div>
-
               <div style={{ background: dash?.dailyPL >= 0 ? 'rgba(45,182,125,.12)' : 'rgba(255,82,82,.12)', border: `1px solid ${dash?.dailyPL >= 0 ? 'rgba(45,182,125,.3)' : 'rgba(255,82,82,.3)'}`, borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>{t.todayPL}</div>
@@ -450,7 +461,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   <div>{t.posOutLabel} −{fmt(dash?.drawerCashOut||0)}</div>
                 </div>
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <MC label={t.cashSales} value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn||0} ${t.transactions}`} c1="rgba(45,182,125,.15)" c2="#2db67d" onClick={() => openDetailSheet('sales')} tapLabel={t.tapHistory} />
                 <MC label={t.cardSales} value={fmt(dash?.cardIn)} sub={`${dash?.cardInTxn||0} ${t.transactions}`} c1="rgba(91,138,240,.15)" c2="#5b8af0" onClick={() => openDetailSheet('sales')} tapLabel={t.tapHistory} />
@@ -459,7 +469,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                 <MC label={t.opening} value={fmt(dash?.openingAmount)} sub={dash?.openingAmount > 0 ? t.setToday : t.notSet} c1="rgba(91,138,240,.15)" c2="#5b8af0" />
                 <MC label={t.closing} value={dash?.closingAmount > 0 ? fmt(dash.closingAmount) : '—'} sub={t.endOfDay} c1="rgba(212,168,67,.15)" c2="#d4a843" />
               </div>
-
               <div style={card}>
                 <div style={{ textAlign: 'center', background: C.surf2, borderRadius: 14, padding: '18px 12px' }}>
                   <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>{t.expectedDrawer}</div>
@@ -482,7 +491,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   <button style={btnG} onClick={() => saveDrawer('closing')}>{t.setClosing}</button>
                 </div>
               </div>
-
               <div style={card}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>{t.todayCashOut}</div>
@@ -505,7 +513,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                       </table>
                     </div>}
               </div>
-
               <div style={{ textAlign: 'center', padding: 14, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
                 {t.builtByFull} <strong style={{ color: C.gold }}>{isAr ? 'عبده الاسعدي' : 'Abdo Alasaadi'}</strong><br />{t.contactMe}
               </div>
@@ -514,7 +521,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </div>
       )}
 
-      {/* ── CASH OUT ── */}
       {page === 'cashout' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.reportCashOut}</div>
@@ -538,7 +544,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
             <div style={fld}><label style={flbl}>{t.note}</label><input style={inp} type="text" placeholder={t.addDetails} value={outNote} onChange={e => setOutNote(e.target.value)} /></div>
             <button style={btn} onClick={confirmOut}>{t.reviewSubmit}</button>
           </div>
-
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{t.recentCashOut}</div>
@@ -559,15 +564,12 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </div>
       )}
 
-      {/* ── EMPLOYEES ── */}
       {page === 'employees' && user.role === 'admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.empHours}</div>
           <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
           <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
-
           {empLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
-
           {empData && !empLoading && (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -596,7 +598,7 @@ if (match[0] === 'Fares') setFaresVideo(true);
                     </div>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 300 }}>
-                        <thead><tr>{[t.date, t.loading.slice(0,2)==='جا'?'دخول':'In', t.loading.slice(0,2)==='جا'?'خروج':'Out', t.hours, t.pay].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+                        <thead><tr>{[t.date, isAr?'دخول':'In', isAr?'خروج':'Out', t.hours, t.pay].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
                         <tbody>{emp.shifts.map((s,si)=>(
                           <tr key={si}>
                             <td style={{...tdStyle,color:C.muted,fontSize:12}}>{s.date}</td>
@@ -616,15 +618,12 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </div>
       )}
 
-      {/* ── REPORTS ── */}
       {page === 'reports' && user.role === 'admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.reportsHistory}</div>
           <DateRange start={rptStart} end={rptEnd} onStart={setRptStart} onEnd={setRptEnd} lang={lang} />
           <button style={btn} onClick={loadReport}>{t.pullReport}</button>
-
           {rptLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
-
           {rptData && !rptLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
@@ -642,7 +641,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   </div>
                 ))}
               </div>
-
               {rptData.days && rptData.days.length > 0 && (() => {
                 const maxVal = Math.max(...rptData.days.map(d => d.totalSales), 1);
                 return (
@@ -666,7 +664,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   </div>
                 );
               })()}
-
               <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 420 }}>
                   <thead><tr>{[t.date, t.cash, t.card, t.total, t.out, 'P&L', t.drawer].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
@@ -683,7 +680,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   ))}</tbody>
                 </table>
               </div>
-
               {rptData.cashOutEntries?.length > 0 && (
                 <div style={card}>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>{t.cashOutEntries}</div>
@@ -704,19 +700,9 @@ if (match[0] === 'Fares') setFaresVideo(true);
                   </div>
                 </div>
               )}
-
               <button style={{ ...btn, background: '#1a1a20', border: `1px solid ${C.bord}`, color: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => {
                 setPdfLoading(true);
-                const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Report - Choices For You</title>
-                <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,Arial,sans-serif;background:#fff;color:#111;padding:40px;font-size:13px}.header{display:flex;align-items:center;gap:20px;margin-bottom:32px;padding-bottom:20px;border-bottom:2px solid #111}.logo{width:60px;height:60px;object-fit:contain;background:#111;border-radius:12px;padding:6px}h1{font-size:22px;font-weight:700}table{width:100%;border-collapse:collapse;margin-bottom:24px}th{background:#f0f0f0;font-size:10px;text-transform:uppercase;padding:10px 12px;text-align:left;color:#666}td{padding:10px 12px;border-bottom:1px solid #eee;font-size:12px}.footer{text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:11px;color:#aaa;line-height:1.8}@media print{body{padding:20px}}</style>
-                </head><body>
-                <div class="header"><img class="logo" src="${window.location.origin}/logo.png" alt="Logo"/><div><h1>Choices For You</h1><p>Cash Manager Report · ${rptStart} to ${rptEnd}</p><p style="color:#888;margin-top:4px">Generated: ${new Date().toLocaleString()}</p></div></div>
-                <h2 style="margin-bottom:12px;font-size:16px">Daily Breakdown</h2>
-                <table><thead><tr><th>Date</th><th>Cash</th><th>Card</th><th>Total</th><th>Cash Out</th><th>P&L</th></tr></thead>
-                <tbody>${[...rptData.days].reverse().map(d=>`<tr><td>${d.date}</td><td style="color:#1a8a5a">${fmt(d.cashIn)}</td><td style="color:#2563eb">${fmt(d.cardIn)}</td><td style="font-weight:600">${fmt(d.totalSales)}</td><td style="color:#c0392b">${fmt(d.cashOut)}</td><td style="color:${d.pl>=0?'#1a8a5a':'#c0392b'};font-weight:600">${fmt(d.pl)}</td></tr>`).join('')}</tbody></table>
-                ${rptData.cashOutEntries?.length?`<h2 style="margin-bottom:12px;font-size:16px">Cash Out Entries</h2><table><thead><tr><th>Date</th><th>Who</th><th>Amount</th><th>Reason</th><th>Note</th></tr></thead><tbody>${rptData.cashOutEntries.map(e=>`<tr><td>${e.date}</td><td>${e.who}</td><td style="color:#c0392b">${fmt(e.amount)}</td><td>${e.reason}</td><td>${e.note||'—'}</td></tr>`).join('')}</tbody></table>`:''}
-                <div class="footer"><strong>Choices For You</strong> · Business Manager<br/>Built by Abdo Alasaadi · ${new Date().toLocaleDateString()}</div>
-                </body></html>`;
+                const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Report - Choices For You</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,Arial,sans-serif;background:#fff;color:#111;padding:40px;font-size:13px}.header{display:flex;align-items:center;gap:20px;margin-bottom:32px;padding-bottom:20px;border-bottom:2px solid #111}.logo{width:60px;height:60px;object-fit:contain;background:#111;border-radius:12px;padding:6px}h1{font-size:22px;font-weight:700}table{width:100%;border-collapse:collapse;margin-bottom:24px}th{background:#f0f0f0;font-size:10px;text-transform:uppercase;padding:10px 12px;text-align:left;color:#666}td{padding:10px 12px;border-bottom:1px solid #eee;font-size:12px}.footer{text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:11px;color:#aaa;line-height:1.8}@media print{body{padding:20px}}</style></head><body><div class="header"><img class="logo" src="${window.location.origin}/logo.png" alt="Logo"/><div><h1>Choices For You</h1><p>Report · ${rptStart} to ${rptEnd}</p><p style="color:#888;margin-top:4px">Generated: ${new Date().toLocaleString()}</p></div></div><h2 style="margin-bottom:12px;font-size:16px">Daily Breakdown</h2><table><thead><tr><th>Date</th><th>Cash</th><th>Card</th><th>Total</th><th>Cash Out</th><th>P&L</th></tr></thead><tbody>${[...rptData.days].reverse().map(d=>`<tr><td>${d.date}</td><td style="color:#1a8a5a">${fmt(d.cashIn)}</td><td style="color:#2563eb">${fmt(d.cardIn)}</td><td style="font-weight:600">${fmt(d.totalSales)}</td><td style="color:#c0392b">${fmt(d.cashOut)}</td><td style="color:${d.pl>=0?'#1a8a5a':'#c0392b'};font-weight:600">${fmt(d.pl)}</td></tr>`).join('')}</tbody></table>${rptData.cashOutEntries?.length?`<h2 style="margin-bottom:12px;font-size:16px">Cash Out Entries</h2><table><thead><tr><th>Date</th><th>Who</th><th>Amount</th><th>Reason</th><th>Note</th></tr></thead><tbody>${rptData.cashOutEntries.map(e=>`<tr><td>${e.date}</td><td>${e.who}</td><td style="color:#c0392b">${fmt(e.amount)}</td><td>${e.reason}</td><td>${e.note||'—'}</td></tr>`).join('')}</tbody></table>`:''}<div class="footer"><strong>Choices For You</strong> · Business Manager<br/>Built by Abdo Alasaadi · ${new Date().toLocaleDateString()}</div></body></html>`;
                 const win = window.open('','_blank');
                 win.document.write(html); win.document.close();
                 setTimeout(()=>{ win.print(); setPdfLoading(false); }, 800);
@@ -728,7 +714,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </div>
       )}
 
-      {/* BOTTOM NAV */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.surf, borderTop: `1px solid ${C.bord}`, display: 'flex', zIndex: 40 }}>
         {tabs.map(([id,ic,lb])=>(
           <button key={id} onClick={()=>setPage(id)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px 10px', cursor: 'pointer', background: 'none', border: 'none', color: page===id?C.gold:C.muted, gap: 5, fontFamily: 'inherit' }}>
@@ -738,7 +723,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
         ))}
       </div>
 
-      {/* ── DETAIL SHEETS ── */}
       {activeSheet === 'cashout' && (
         <Sheet title={t.cashOutHistory} onClose={() => setActiveSheet(null)} closeLabel={t.close}>
           <DateRange start={sheetStart} end={sheetEnd} lang={lang}
@@ -863,7 +847,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </Sheet>
       )}
 
-      {/* CONFIRM SHEET */}
       {confirmSheet && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={e=>e.target===e.currentTarget&&setConfirmSheet(false)}>
           <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -887,7 +870,6 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </div>
       )}
 
-      {/* SUCCESS SHEET */}
       {successSheet && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={e=>e.target===e.currentTarget&&setSuccessSheet(false)}>
           <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
@@ -900,26 +882,19 @@ if (match[0] === 'Fares') setFaresVideo(true);
         </div>
       )}
 
-      {/* TOAST */}
+      {/* FARES VIDEO — plays every time Fares logs in */}
+      {faresVideo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.95)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setFaresVideo(false)}>
+          <video
+            src="/fares.mp4"
+            autoPlay
+            playsInline
+            style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: 16 }}
+            onEnded={() => setFaresVideo(false)}
+          />
+        </div>
+      )}
 
-
-{/* PIN ALERT */}
-{pinAlert && (
-  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}>
-    <div style={{ background: '#1a1a20', border: '1px solid rgba(224,82,82,.4)', borderRadius: 24, padding: '32px 24px', width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-      <div style={{ fontSize: 48 }}>🔒</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#e05252' }}>{isAr ? 'رقم غير موجود' : 'Access Denied'}</div>
-      <div style={{ fontSize: 14, color: '#888', lineHeight: 1.6 }}>
-        {isAr
-          ? 'هذا الرقم غير موجود في النظام.\nيرجى التواصل مع عبده الاسعدي للحصول على الصلاحية.'
-          : 'This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'}
-      </div>
-      <button onClick={() => setPinAlert(false)} style={{ background: '#d4a843', border: 'none', borderRadius: 14, color: '#0f0f12', fontSize: 16, fontWeight: 700, padding: '14px 40px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 8 }}>
-        {isAr ? 'حسناً' : 'OK'}
-      </button>
-    </div>
-  </div>
-)}
       {toast && (
         <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: C.surf, border: `1px solid ${toast.type==='err'?'rgba(224,82,82,.5)':'rgba(212,168,67,.5)'}`, borderRadius: 14, padding: '13px 22px', fontSize: 14, zIndex: 200, whiteSpace: 'nowrap', color: toast.type==='err'?C.red:C.gold }}>
           {toast.msg}
@@ -928,18 +903,4 @@ if (match[0] === 'Fares') setFaresVideo(true);
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
-
-{/* FARES VIDEO */}
-{faresVideo && (
-  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.95)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    onClick={() => setFaresVideo(false)}>
-    <video
-      src="https://drive.google.com/uc?export=download&id=1uobytQCOraf0a_u3KweK02xslVQg_EPt"
-      autoPlay
-      playsInline
-      muted={false}
-      style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: 16 }}
-      onEnded={() => setFaresVideo(false)}
-    />
-  </div>
-)}
+}
