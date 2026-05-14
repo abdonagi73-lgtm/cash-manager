@@ -288,7 +288,7 @@ export default function App() {
     const pval = p || pin;
     if (pval.length < 4) { setLoginErr(isAr ? 'أدخل رقم PIN المكون من 4 أرقام.' : 'Enter your 4-digit PIN.'); return; }
     const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
-    if (!match) { alert(isAr ? 'هذا الرقم غير موجود في النظام.\nيرجى التواصل مع عبدو العساعدي للحصول على الصلاحية.' : 'This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'); setPin(''); return; }
+    if (!match) { alert(isAr ? 'هذا الرقم غير موجود في النظام.\nيرجى التواصل مع عبده الاسعدي للحصول على الصلاحية.' : 'This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'); setPin(''); return; }
     const userData = { name: match[0], role: match[1].role };
     sessionStorage.setItem('cashUser', JSON.stringify(userData));
     setUser(userData); setLoginErr(''); setPin('');
