@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 const LANG = {
   en: {
     title: 'Choices For You', sub: 'Business Manager', enterPin: 'Enter your PIN to sign in',
@@ -20,6 +21,18 @@ const LANG = {
     selectReason: 'Select reason...', hoursWorked: 'Hours Worked', addDetails: 'Add details...',
     notSet: 'not set', setToday: 'set today', endOfDay: 'end of day', transactions: 'transactions',
     entries: 'entries', fromSquare: 'from square pos', recentCashOut: 'Recent Cash Out', viewAll: 'View All',
+    sales: 'Sales', posIn: 'POS Cash In', posOut: 'POS Cash Out', totalOut: 'Total Out',
+    noEntriesFound: 'No entries found.', noSalesFound: 'No sales found.', noPOSFound: 'No POS events found.',
+    noTimecardFound: 'No timecard data found for this period.', cashOutHistory: 'Cash Out History',
+    salesHistory: 'Sales History', posHistory: 'POS Cash In/Out History', cash: 'Cash', card: 'Card',
+    total: 'Total', date: 'Date', time: 'Time', hours: 'Hours', pay: 'Pay', type: 'Type',
+    payIn: 'Pay In', payOut: 'Pay Out', dailySales: 'Daily Sales', dailyBreakdown: 'Daily Breakdown',
+    cashOutEntries: 'Cash Out Entries', drawer: 'Drawer', out: 'Out', over: 'Over', short: 'Short',
+    match: 'Match', days: 'Days', noEntriesToday: 'No entries today.', openingDollar: 'Opening ($)',
+    closingDollar: 'Closing ($)', salesLabel: 'Sales:', cashOutLabel: 'Cash Out:', posOutLabel: 'POS Out:',
+    whoLabel: 'Who', amountLabel: 'Amount', reasonLabel: 'Reason', noteLabel: 'Note',
+    tapHistory: 'tap for history ›', remove: '✕', confirm: 'Confirm Cash Out',
+    builtByFull: 'Built by', contactMe: 'Need help? Contact me',
   },
   ar: {
     title: 'خيارات لك', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
@@ -40,9 +53,20 @@ const LANG = {
     selectReason: 'اختر السبب...', hoursWorked: 'ساعات العمل', addDetails: 'أضف تفاصيل...',
     notSet: 'غير محدد', setToday: 'محدد اليوم', endOfDay: 'نهاية اليوم', transactions: 'معاملات',
     entries: 'مدخلات', fromSquare: 'من نقطة البيع', recentCashOut: 'الصرف الأخير', viewAll: 'عرض الكل',
+    sales: 'المبيعات', posIn: 'نقدي داخل', posOut: 'نقدي خارج', totalOut: 'إجمالي الصرف',
+    noEntriesFound: 'لا توجد مدخلات.', noSalesFound: 'لا توجد مبيعات.', noPOSFound: 'لا توجد أحداث نقدية.',
+    noTimecardFound: 'لا توجد بيانات دوام لهذه الفترة.', cashOutHistory: 'سجل الصرف النقدي',
+    salesHistory: 'سجل المبيعات', posHistory: 'سجل النقدي داخل/خارج', cash: 'نقدي', card: 'بطاقة',
+    total: 'الإجمالي', date: 'التاريخ', time: 'الوقت', hours: 'الساعات', pay: 'الأجر', type: 'النوع',
+    payIn: 'إيداع', payOut: 'سحب', dailySales: 'المبيعات اليومية', dailyBreakdown: 'التفصيل اليومي',
+    cashOutEntries: 'مدخلات الصرف', drawer: 'الصندوق', out: 'خارج', over: 'زيادة', short: 'نقص',
+    match: 'مطابق', days: 'أيام', noEntriesToday: 'لا مدخلات اليوم.', openingDollar: 'الافتتاح ($)',
+    closingDollar: 'الإغلاق ($)', salesLabel: 'المبيعات:', cashOutLabel: 'الصرف:', posOutLabel: 'خارج POS:',
+    whoLabel: 'من', amountLabel: 'المبلغ', reasonLabel: 'السبب', noteLabel: 'ملاحظة',
+    tapHistory: 'اضغط للسجل ›', remove: '✕', confirm: 'تأكيد الصرف النقدي',
+    builtByFull: 'بناء بواسطة', contactMe: 'تحتاج مساعدة؟ تواصل معي',
   }
 };
-
 
 const PINS = {
   Abdo:  { pin: '5436', role: 'admin' },
@@ -72,13 +96,13 @@ function today() { return new Date().toISOString().split('T')[0]; }
 function weekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d.toISOString().split('T')[0]; }
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split('T')[0]; }
 
-function MC({ label, value, sub, c1, c2, onClick }) {
+function MC({ label, value, sub, c1, c2, onClick, tapLabel }) {
   return (
     <div onClick={onClick} style={{ background: c1, border: `1px solid ${c2}`, borderRadius: 16, padding: '16px 14px', cursor: onClick ? 'pointer' : 'default', position: 'relative' }}>
       <div style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, color: c2 }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: c2 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#888', marginTop: 5 }}>{sub}</div>
-      {onClick && <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, color: c2, opacity: .6 }}>tap for history ›</div>}
+      {onClick && <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, color: c2, opacity: .6 }}>{tapLabel || 'tap for history ›'}</div>}
     </div>
   );
 }
@@ -109,7 +133,7 @@ function RamLoader() {
   );
 }
 
-function Sheet({ title, onClose, children }) {
+function Sheet({ title, onClose, closeLabel, children }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: '#1a1a20', border: '1px solid rgba(255,255,255,.08)', borderRadius: '24px 24px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -117,7 +141,7 @@ function Sheet({ title, onClose, children }) {
           <div style={{ width: 40, height: 4, background: '#2a2a35', borderRadius: 2, margin: '0 auto 14px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
-            <button onClick={onClose} style={{ background: '#22222a', border: 'none', borderRadius: 8, color: '#888', cursor: 'pointer', fontSize: 14, padding: '6px 12px' }}>Close</button>
+            <button onClick={onClose} style={{ background: '#22222a', border: 'none', borderRadius: 8, color: '#888', cursor: 'pointer', fontSize: 14, padding: '6px 12px' }}>{closeLabel || 'Close'}</button>
           </div>
         </div>
         <div style={{ overflowY: 'auto', padding: '0 20px 40px', flex: 1 }}>{children}</div>
@@ -126,14 +150,17 @@ function Sheet({ title, onClose, children }) {
   );
 }
 
-function DateRange({ start, end, onStart, onEnd, presets = true }) {
+function DateRange({ start, end, onStart, onEnd, presets = true, lang = 'en' }) {
   const C = { surf2: '#22222a', bord: 'rgba(255,255,255,.08)', muted: '#888' };
   const inp = { background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: '#fff', fontSize: 15, padding: '10px 12px', width: '100%', outline: 'none', fontFamily: 'inherit', appearance: 'none' };
+  const labels = lang === 'ar'
+    ? [['اليوم', today(), today()],['7 أيام', daysAgo(6), today()],['30 يوم', daysAgo(29), today()],['هذا الأسبوع', weekStart(), today()]]
+    : [['Today', today(), today()],['7 days', daysAgo(6), today()],['30 days', daysAgo(29), today()],['This week', weekStart(), today()]];
   return (
     <div style={{ marginBottom: 16 }}>
       {presets && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-          {[['Today', today(), today()],['7 days', daysAgo(6), today()],['30 days', daysAgo(29), today()],['This week', weekStart(), today()]].map(([l,s,e]) => (
+          {labels.map(([l,s,e]) => (
             <button key={l} onClick={() => { onStart(s); onEnd(e); }} style={{ background: '#22222a', border: '1px solid rgba(255,255,255,.08)', borderRadius: 20, color: '#888', cursor: 'pointer', fontSize: 12, padding: '5px 12px', fontFamily: 'inherit' }}>{l}</button>
           ))}
         </div>
@@ -147,17 +174,16 @@ function DateRange({ start, end, onStart, onEnd, presets = true }) {
 }
 
 export default function App() {
+  const [lang, setLang] = useState('en');
+  const t = LANG[lang];
+  const isAr = lang === 'ar';
 
-const [lang, setLang] = useState('en');
-const t = LANG[lang];
-const isAr = lang === 'ar';
   const C = {
     bg: '#0f0f12', surf: '#1a1a20', surf2: '#22222a',
     bord: 'rgba(255,255,255,.08)', gold: '#d4a843',
     green: '#2db67d', red: '#e05252', blue: '#5b8af0',
     purple: '#a855f7', muted: '#888',
   };
-
   const inp = { background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 12, color: '#fff', fontSize: 16, padding: '14px 16px', width: '100%', outline: 'none', fontFamily: 'inherit', appearance: 'none', WebkitAppearance: 'none' };
   const btn = { display: 'block', width: '100%', background: C.gold, border: 'none', borderRadius: 14, color: '#0f0f12', fontSize: 16, fontWeight: 700, padding: 16, textAlign: 'center', cursor: 'pointer', fontFamily: 'inherit' };
   const btnG = { ...btn, background: C.surf2, border: `1px solid ${C.bord}`, color: '#fff', fontWeight: 500, padding: 14 };
@@ -212,7 +238,7 @@ const isAr = lang === 'ar';
   }, []);
 
   useEffect(() => {
-    if (user) { loadDash(); const t = setInterval(loadDash, 5*60*1000); return () => clearInterval(t); }
+    if (user) { loadDash(); const timer = setInterval(loadDash, 5*60*1000); return () => clearInterval(timer); }
   }, [user, loadDash]);
 
   useEffect(() => {
@@ -260,9 +286,10 @@ const isAr = lang === 'ar';
   };
   const doLogin = (p) => {
     const pval = p || pin;
-    if (pval.length < 4) { setLoginErr('Enter your 4-digit PIN.'); return; }
+    if (pval.length < 4) { setLoginErr(isAr ? 'أدخل رقم PIN المكون من 4 أرقام.' : 'Enter your 4-digit PIN.'); return; }
     const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
-if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'); setPin(''); return; }    const userData = { name: match[0], role: match[1].role };
+    if (!match) { alert(isAr ? 'هذا الرقم غير موجود في النظام.\nيرجى التواصل مع عبدو العساعدي للحصول على الصلاحية.' : 'This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'); setPin(''); return; }
+    const userData = { name: match[0], role: match[1].role };
     sessionStorage.setItem('cashUser', JSON.stringify(userData));
     setUser(userData); setLoginErr(''); setPin('');
   };
@@ -274,16 +301,16 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
 
   const saveDrawer = (type) => {
     const val = parseFloat(type === 'opening' ? openingAmt : closingAmt);
-    if (!val || val <= 0) { showToast('Enter a valid amount.', 'err'); return; }
+    if (!val || val <= 0) { showToast(isAr ? 'أدخل مبلغاً صحيحاً.' : 'Enter a valid amount.', 'err'); return; }
     callScript('setDrawer', { type, amount: val, who: user.name })
-      .then(() => { showToast(`${type === 'opening' ? 'Opening' : 'Closing'} set to ${fmt(val)}`); loadDash(); })
+      .then(() => { showToast(`${type === 'opening' ? t.opening : t.closing} → ${fmt(val)}`); loadDash(); })
       .catch(() => showToast('Error', 'err'));
   };
   const confirmOut = () => {
-    if (!outWho) { showToast('Select who.', 'err'); return; }
-    if (!outAmt || parseFloat(outAmt) <= 0) { showToast('Enter a valid amount.', 'err'); return; }
-    if (!outReason) { showToast('Select a reason.', 'err'); return; }
-    if (outReason === 'Employee Pay' && !outHours) { showToast('Enter hours worked.', 'err'); return; }
+    if (!outWho) { showToast(isAr ? 'اختر الاسم.' : 'Select who.', 'err'); return; }
+    if (!outAmt || parseFloat(outAmt) <= 0) { showToast(isAr ? 'أدخل مبلغاً صحيحاً.' : 'Enter a valid amount.', 'err'); return; }
+    if (!outReason) { showToast(isAr ? 'اختر السبب.' : 'Select a reason.', 'err'); return; }
+    if (outReason === 'Employee Pay' && !outHours) { showToast(isAr ? 'أدخل ساعات العمل.' : 'Enter hours worked.', 'err'); return; }
     let note = outNote;
     if (outReason === 'Employee Pay' && outHours) note = `${outHours} hrs${outNote ? ' · ' + outNote : ''}`;
     setPending({ who: outWho, amt: parseFloat(outAmt), reason: outReason, note });
@@ -293,7 +320,7 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
     setConfirmSheet(false); if (!pending) return;
     callScript('logCashOut', { who: pending.who, amount: pending.amt, reason: pending.reason, note: pending.note || '' })
       .then(() => {
-        setSuccessMsg(`${fmt(pending.amt)} by ${pending.who} (${pending.reason}) recorded.`);
+        setSuccessMsg(`${fmt(pending.amt)} — ${pending.who} (${pending.reason})`);
         setSuccessSheet(true);
         setOutWho(''); setOutAmt(''); setOutReason(''); setOutHours(''); setOutNote('');
         setPending(null); loadDash();
@@ -301,22 +328,26 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
       .catch(() => showToast('Error submitting.', 'err'));
   };
   const delEntry = (rowIndex) => {
-    if (!confirm('Remove this entry?')) return;
+    if (!confirm(isAr ? 'حذف هذا المدخل؟' : 'Remove this entry?')) return;
     callScript('deleteCashOut', { rowIndex })
-      .then(() => { showToast('Removed.'); loadDash(); if (activeSheet === 'cashout') reloadSheet('cashout', sheetStart, sheetEnd); })
+      .then(() => { showToast(isAr ? 'تم الحذف.' : 'Removed.'); loadDash(); if (activeSheet === 'cashout') reloadSheet('cashout', sheetStart, sheetEnd); })
       .catch(() => showToast('Error', 'err'));
   };
 
+  // ── LOGIN ──
   if (!user) return (
-    <div style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: "'Inter',-apple-system,sans-serif", minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+    <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
       <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 24, padding: '32px 20px', width: '100%', maxWidth: 400 }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <img src="/logo.png" alt="Logo" style={{ width: 64, height: 64, objectFit: 'contain', background: '#111', borderRadius: 16, padding: 8, marginBottom: 14 }} />
-          <div style={{ fontSize: 26, fontWeight: 700, color: C.gold }}>Choices For You</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: C.gold }}>{t.title}</div>
           <div style={{ width: 36, height: 2, background: C.gold, margin: '8px auto', borderRadius: 2, opacity: .5 }} />
-          <div style={{ fontSize: 11, color: C.muted, letterSpacing: 3, textTransform: 'uppercase' }}>Cash Manager</div>
+          <div style={{ fontSize: 11, color: C.muted, letterSpacing: 3, textTransform: 'uppercase' }}>{t.sub}</div>
         </div>
-        <div style={{ fontSize: 14, color: C.muted, textAlign: 'center', marginBottom: 24 }}>Enter your PIN to sign in</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button onClick={() => setLang(l => l === 'en' ? 'ar' : 'en')} style={{ background: 'none', border: `1px solid ${C.bord}`, color: C.muted, fontSize: 13, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>{lang === 'en' ? 'ع' : 'EN'}</button>
+        </div>
+        <div style={{ fontSize: 14, color: C.muted, textAlign: 'center', marginBottom: 24 }}>{t.enterPin}</div>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24 }}>
           {[0,1,2,3].map(i => <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: i < pin.length ? C.gold : '#2a2a35', border: `1px solid ${i < pin.length ? C.gold : '#3a3a48'}`, transition: 'all .15s' }} />)}
         </div>
@@ -330,141 +361,135 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
         </div>
         <div style={{ color: C.red, fontSize: 13, textAlign: 'center', minHeight: 20, marginBottom: 6 }}>{loginErr}</div>
         <div style={{ textAlign: 'center', marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
-          Built by <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />Need help? Contact me
+          {t.builtByFull} <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />{t.contactMe}
         </div>
       </div>
     </div>
   );
 
   const tabs = user.role === 'admin'
-    ? [['today','🏠','Today'],['cashout','💸','Cash Out'],['employees','👥','Employees'],['reports','📊','Reports']]
-    : [['today','🏠','Today'],['cashout','💸','Cash Out']];
+    ? [['today','🏠', t.today],['cashout','💸', t.cashOut],['employees','👥', t.employees],['reports','📊', t.reports]]
+    : [['today','🏠', t.today],['cashout','💸', t.cashOut]];
 
   return (
-   <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', fontSize: 16 }}>
+    <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', fontSize: 16 }}>
 
       {/* TOPBAR */}
       <div style={{ background: C.surf, borderBottom: `1px solid ${C.bord}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 56, position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', background: '#111', borderRadius: 8, padding: 3 }} />
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>Choices For You</div>
-            <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Business Manager</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{t.title}</div>
+            <div style={{ fontSize: 9, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.sub}</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontSize: 12, color: C.muted, background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 20, padding: '5px 12px' }}>{user.name}{user.role === 'admin' ? ' ★' : ''}</div>
           <button onClick={() => setLang(l => l === 'en' ? 'ar' : 'en')} style={{ background: 'none', border: `1px solid ${C.bord}`, color: C.muted, fontSize: 13, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>{lang === 'en' ? 'ع' : 'EN'}</button>
-<button onClick={logout} style={{ background: 'none', border: `1px solid ${C.bord}`, color: C.muted, fontSize: 13, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>{t.signOut}</button>
+          <button onClick={logout} style={{ background: 'none', border: `1px solid ${C.bord}`, color: C.muted, fontSize: 13, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>{t.signOut}</button>
         </div>
       </div>
 
       {/* ── TODAY ── */}
       {page === 'today' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>● Live · Today</div>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.liveToday}</div>
 
           {dashLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
               <RamLoader />
-              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div>
             </div>
           ) : (
             <>
-              {/* Low drawer alert */}
               {lowDrawer && (
                 <div style={{ background: 'rgba(255,82,82,.15)', border: '1px solid rgba(255,82,82,.4)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ fontSize: 20 }}>⚠️</div>
                   <div>
-                    <div style={{ fontWeight: 700, color: C.red, fontSize: 14 }}>Low Drawer Alert</div>
-                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Expected drawer is below ${lowDrawerThreshold}</div>
+                    <div style={{ fontWeight: 700, color: C.red, fontSize: 14 }}>{t.lowDrawerAlert}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{t.lowDrawerSub}</div>
                   </div>
                 </div>
               )}
 
-              {/* Sticky expected drawer */}
               <div style={{ position: 'sticky', top: 56, zIndex: 39, background: C.bg, paddingBottom: 4 }}>
                 <div style={{ background: 'linear-gradient(135deg, rgba(212,168,67,.2), rgba(212,168,67,.05))', border: '1px solid rgba(212,168,67,.4)', borderRadius: 14, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontSize: 10, color: C.gold, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>Expected in Drawer</div>
+                    <div style={{ fontSize: 10, color: C.gold, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>{t.expectedDrawer}</div>
                     <div style={{ fontSize: 28, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: isAr ? 'left' : 'right' }}>
                     <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>{fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} + {fmt(dash?.drawerCashIn||0)} − {fmt(dash?.cashOut)} − {fmt(dash?.drawerCashOut||0)}</div>
                     {diff !== null && (
                       <div style={{ fontSize: 13, fontWeight: 700, padding: '5px 10px', borderRadius: 8, background: Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
-                        {Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)} Over` : `${fmt(diff)} Short`}
+                        {Math.abs(diff) < 0.01 ? `✓ ${t.match}` : diff > 0 ? `+${fmt(diff)} ${t.over}` : `${fmt(diff)} ${t.short}`}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Daily P&L */}
               <div style={{ background: dash?.dailyPL >= 0 ? 'rgba(45,182,125,.12)' : 'rgba(255,82,82,.12)', border: `1px solid ${dash?.dailyPL >= 0 ? 'rgba(45,182,125,.3)' : 'rgba(255,82,82,.3)'}`, borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Today's P&L</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>{t.todayPL}</div>
                   <div style={{ fontSize: 26, fontWeight: 700, color: dash?.dailyPL >= 0 ? C.green : C.red }}>{fmt(dash?.dailyPL)}</div>
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 12, color: C.muted }}>
-                  <div>Sales: {fmt(dash?.totalSales)}</div>
-                  <div>Cash Out: −{fmt(dash?.cashOut)}</div>
-                  <div>POS Out: −{fmt(dash?.drawerCashOut||0)}</div>
+                <div style={{ textAlign: isAr ? 'left' : 'right', fontSize: 12, color: C.muted }}>
+                  <div>{t.salesLabel} {fmt(dash?.totalSales)}</div>
+                  <div>{t.cashOutLabel} −{fmt(dash?.cashOut)}</div>
+                  <div>{t.posOutLabel} −{fmt(dash?.drawerCashOut||0)}</div>
                 </div>
               </div>
 
-              {/* Metric cards */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <MC label="Cash Sales" value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn||0} transactions`} c1="rgba(45,182,125,.15)" c2="#2db67d" onClick={() => openDetailSheet('sales')} />
-                <MC label="Card Sales" value={fmt(dash?.cardIn)} sub={`${dash?.cardInTxn||0} transactions`} c1="rgba(91,138,240,.15)" c2="#5b8af0" onClick={() => openDetailSheet('sales')} />
-                <MC label="Manual Cash Out" value={fmt(dash?.cashOut)} sub={`${dash?.cashOutEntries?.length||0} entries`} c1="rgba(224,82,82,.15)" c2="#e05252" onClick={() => openDetailSheet('cashout')} />
-                <MC label="POS In/Out" value={`+${fmt(dash?.drawerCashIn||0)} / −${fmt(dash?.drawerCashOut||0)}`} sub="from square pos" c1="rgba(168,85,247,.15)" c2="#a855f7" onClick={() => openDetailSheet('pos')} />
-                <MC label="Opening" value={fmt(dash?.openingAmount)} sub={dash?.openingAmount > 0 ? 'set today' : 'not set'} c1="rgba(91,138,240,.15)" c2="#5b8af0" />
-                <MC label="Closing" value={dash?.closingAmount > 0 ? fmt(dash.closingAmount) : '—'} sub="end of day" c1="rgba(212,168,67,.15)" c2="#d4a843" />
+                <MC label={t.cashSales} value={fmt(dash?.cashIn)} sub={`${dash?.cashInTxn||0} ${t.transactions}`} c1="rgba(45,182,125,.15)" c2="#2db67d" onClick={() => openDetailSheet('sales')} tapLabel={t.tapHistory} />
+                <MC label={t.cardSales} value={fmt(dash?.cardIn)} sub={`${dash?.cardInTxn||0} ${t.transactions}`} c1="rgba(91,138,240,.15)" c2="#5b8af0" onClick={() => openDetailSheet('sales')} tapLabel={t.tapHistory} />
+                <MC label={t.manualOut} value={fmt(dash?.cashOut)} sub={`${dash?.cashOutEntries?.length||0} ${t.entries}`} c1="rgba(224,82,82,.15)" c2="#e05252" onClick={() => openDetailSheet('cashout')} tapLabel={t.tapHistory} />
+                <MC label={t.posInOut} value={`+${fmt(dash?.drawerCashIn||0)} / −${fmt(dash?.drawerCashOut||0)}`} sub={t.fromSquare} c1="rgba(168,85,247,.15)" c2="#a855f7" onClick={() => openDetailSheet('pos')} tapLabel={t.tapHistory} />
+                <MC label={t.opening} value={fmt(dash?.openingAmount)} sub={dash?.openingAmount > 0 ? t.setToday : t.notSet} c1="rgba(91,138,240,.15)" c2="#5b8af0" />
+                <MC label={t.closing} value={dash?.closingAmount > 0 ? fmt(dash.closingAmount) : '—'} sub={t.endOfDay} c1="rgba(212,168,67,.15)" c2="#d4a843" />
               </div>
 
-              {/* Drawer card */}
               <div style={card}>
                 <div style={{ textAlign: 'center', background: C.surf2, borderRadius: 14, padding: '18px 12px' }}>
-                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>Expected in Drawer</div>
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>{t.expectedDrawer}</div>
                   <div style={{ fontSize: 40, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{fmt(expectedInDrawer)}</div>
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>{fmt(dash?.openingAmount)} + {fmt(dash?.cashIn)} + {fmt(dash?.drawerCashIn||0)} − {fmt(dash?.cashOut)} − {fmt(dash?.drawerCashOut||0)}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Actual $</span>
+                  <span style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>{t.actualDollar}</span>
                   <input style={{ flex: 1, minWidth: 0, background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: '#fff', fontSize: 18, padding: '12px 14px', outline: 'none', fontFamily: 'inherit' }} type="number" placeholder="0.00" inputMode="decimal" value={actual} onChange={e => setActual(e.target.value)} />
                   <div style={{ fontSize: 13, fontWeight: 700, padding: '9px 12px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0, background: diff === null ? C.surf2 : Math.abs(diff) < 0.01 ? 'rgba(45,182,125,.2)' : diff > 0 ? 'rgba(255,209,102,.2)' : 'rgba(224,82,82,.2)', color: diff === null ? C.muted : Math.abs(diff) < 0.01 ? C.green : diff > 0 ? '#ffd166' : C.red }}>
-                    {diff === null ? '—' : Math.abs(diff) < 0.01 ? '✓ Match' : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
+                    {diff === null ? '—' : Math.abs(diff) < 0.01 ? `✓ ${t.match}` : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div style={fld}><label style={flbl}>Opening ($)</label><input style={inp} type="number" placeholder="200.00" inputMode="decimal" value={openingAmt} onChange={e => setOpeningAmt(e.target.value)} /></div>
-                  <div style={fld}><label style={flbl}>Closing ($)</label><input style={inp} type="number" placeholder="850.00" inputMode="decimal" value={closingAmt} onChange={e => setClosingAmt(e.target.value)} /></div>
+                  <div style={fld}><label style={flbl}>{t.openingDollar}</label><input style={inp} type="number" placeholder="200.00" inputMode="decimal" value={openingAmt} onChange={e => setOpeningAmt(e.target.value)} /></div>
+                  <div style={fld}><label style={flbl}>{t.closingDollar}</label><input style={inp} type="number" placeholder="850.00" inputMode="decimal" value={closingAmt} onChange={e => setClosingAmt(e.target.value)} /></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button style={btnG} onClick={() => saveDrawer('opening')}>Set Opening</button>
-                  <button style={btnG} onClick={() => saveDrawer('closing')}>Set Closing</button>
+                  <button style={btnG} onClick={() => saveDrawer('opening')}>{t.setOpening}</button>
+                  <button style={btnG} onClick={() => saveDrawer('closing')}>{t.setClosing}</button>
                 </div>
               </div>
 
-              {/* Today's cash out log */}
               <div style={card}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>Today's Cash Out</div>
-                  <button onClick={() => openDetailSheet('cashout')} style={{ background: 'none', border: `1px solid ${C.bord}`, borderRadius: 8, color: C.muted, cursor: 'pointer', fontSize: 12, padding: '5px 10px', fontFamily: 'inherit' }}>Full History</button>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>{t.todayCashOut}</div>
+                  <button onClick={() => openDetailSheet('cashout')} style={{ background: 'none', border: `1px solid ${C.bord}`, borderRadius: 8, color: C.muted, cursor: 'pointer', fontSize: 12, padding: '5px 10px', fontFamily: 'inherit' }}>{t.fullHistory}</button>
                 </div>
                 {!dash?.cashOutEntries?.length
-                  ? <div style={{ textAlign: 'center', padding: 20, color: C.muted, fontSize: 14 }}>No entries yet today.</div>
+                  ? <div style={{ textAlign: 'center', padding: 20, color: C.muted, fontSize: 14 }}>{t.noEntries}</div>
                   : <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 300 }}>
-                        <thead><tr>{['Time','Who','Amount','Reason', user.role==='admin'?'':null].filter(h=>h!==null).map((h,i)=><th key={i} style={thStyle}>{h}</th>)}</tr></thead>
+                        <thead><tr>{[t.time, t.who, t.amount, t.reason, user.role==='admin'?'':null].filter(h=>h!==null).map((h,i)=><th key={i} style={thStyle}>{h}</th>)}</tr></thead>
                         <tbody>{dash.cashOutEntries.map((e,i)=>(
                           <tr key={i}>
                             <td style={{...tdStyle,color:C.muted,fontSize:12}}>{e.time}</td>
                             <td style={tdStyle}>{e.who}</td>
                             <td style={{...tdStyle,color:C.red,fontWeight:600}}>{fmt(e.amount)}</td>
                             <td style={{...tdStyle,color:C.muted}}>{e.reason}</td>
-                            {user.role==='admin'&&<td style={tdStyle}><button onClick={()=>delEntry(e.rowIndex)} style={{background:'none',border:`1px solid ${C.bord}`,borderRadius:6,color:C.muted,cursor:'pointer',fontSize:12,padding:'4px 8px'}}>✕</button></td>}
+                            {user.role==='admin'&&<td style={tdStyle}><button onClick={()=>delEntry(e.rowIndex)} style={{background:'none',border:`1px solid ${C.bord}`,borderRadius:6,color:C.muted,cursor:'pointer',fontSize:12,padding:'4px 8px'}}>{t.remove}</button></td>}
                           </tr>
                         ))}</tbody>
                       </table>
@@ -472,7 +497,7 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
               </div>
 
               <div style={{ textAlign: 'center', padding: 14, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
-                Built by <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />Need help? Contact me
+                {t.builtByFull} <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />{t.contactMe}
               </div>
             </>
           )}
@@ -482,36 +507,35 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
       {/* ── CASH OUT ── */}
       {page === 'cashout' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Report Cash Out</div>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.reportCashOut}</div>
           <div style={card}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>New Entry</div>
-            <div style={fld}><label style={flbl}>Who</label>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{t.newEntry}</div>
+            <div style={fld}><label style={flbl}>{t.who}</label>
               <select style={inp} value={outWho} onChange={e => setOutWho(e.target.value)}>
-                <option value="">Select name...</option>
+                <option value="">{t.selectName}</option>
                 <option>Abdo</option><option>Fares</option><option>Assim</option><option>Kamal</option>
               </select>
             </div>
-            <div style={fld}><label style={flbl}>Amount ($)</label><input style={inp} type="number" placeholder="0.00" inputMode="decimal" value={outAmt} onChange={e => setOutAmt(e.target.value)} /></div>
-            <div style={fld}><label style={flbl}>Reason</label>
+            <div style={fld}><label style={flbl}>{t.amount}</label><input style={inp} type="number" placeholder="0.00" inputMode="decimal" value={outAmt} onChange={e => setOutAmt(e.target.value)} /></div>
+            <div style={fld}><label style={flbl}>{t.reason}</label>
               <select style={inp} value={outReason} onChange={e => { setOutReason(e.target.value); if (e.target.value !== 'Employee Pay') setOutHours(''); }}>
-                <option value="">Select reason...</option>
+                <option value="">{t.selectReason}</option>
                 <option>Bank Deposit</option><option>Refund</option><option>Supplier Payment</option>
                 <option>Store Expense</option><option>Employee Pay</option><option>Adjustment</option><option>Other</option>
               </select>
             </div>
-            {outReason === 'Employee Pay' && <div style={fld}><label style={flbl}>Hours Worked</label><input style={inp} type="number" placeholder="e.g. 8" inputMode="decimal" value={outHours} onChange={e => setOutHours(e.target.value)} /></div>}
-            <div style={fld}><label style={flbl}>Note (optional)</label><input style={inp} type="text" placeholder="Add details..." value={outNote} onChange={e => setOutNote(e.target.value)} /></div>
-            <button style={btn} onClick={confirmOut}>Review & Submit</button>
+            {outReason === 'Employee Pay' && <div style={fld}><label style={flbl}>{t.hoursWorked}</label><input style={inp} type="number" placeholder="e.g. 8" inputMode="decimal" value={outHours} onChange={e => setOutHours(e.target.value)} /></div>}
+            <div style={fld}><label style={flbl}>{t.note}</label><input style={inp} type="text" placeholder={t.addDetails} value={outNote} onChange={e => setOutNote(e.target.value)} /></div>
+            <button style={btn} onClick={confirmOut}>{t.reviewSubmit}</button>
           </div>
 
-          {/* Quick history */}
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Recent Cash Out</div>
-              <button onClick={() => openDetailSheet('cashout')} style={{ background: 'none', border: `1px solid ${C.bord}`, borderRadius: 8, color: C.muted, cursor: 'pointer', fontSize: 12, padding: '5px 10px', fontFamily: 'inherit' }}>View All</button>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{t.recentCashOut}</div>
+              <button onClick={() => openDetailSheet('cashout')} style={{ background: 'none', border: `1px solid ${C.bord}`, borderRadius: 8, color: C.muted, cursor: 'pointer', fontSize: 12, padding: '5px 10px', fontFamily: 'inherit' }}>{t.viewAll}</button>
             </div>
             {!dash?.cashOutEntries?.length
-              ? <div style={{ textAlign: 'center', padding: 16, color: C.muted, fontSize: 14 }}>No entries today.</div>
+              ? <div style={{ textAlign: 'center', padding: 16, color: C.muted, fontSize: 14 }}>{t.noEntriesToday}</div>
               : dash.cashOutEntries.slice(0,5).map((e,i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < dash.cashOutEntries.length-1 ? `1px solid rgba(255,255,255,.05)` : 'none' }}>
                   <div>
@@ -528,30 +552,26 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
       {/* ── EMPLOYEES ── */}
       {page === 'employees' && user.role === 'admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Employee Hours & Pay</div>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.empHours}</div>
+          <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
+          <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
 
-          <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} />
-          <button style={btn} onClick={loadEmployees}>Load Hours</button>
-
-          {empLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div></div>}
+          {empLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
 
           {empData && !empLoading && (
             <>
-              {/* Summary */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div style={{ background: 'rgba(212,168,67,.12)', border: '1px solid rgba(212,168,67,.3)', borderRadius: 14, padding: '16px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Total Hours</div>
+                  <div style={{ fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{t.totalHours}</div>
                   <div style={{ fontSize: 24, fontWeight: 700, color: C.gold }}>{fmtH(empData.totalHours)}</div>
                 </div>
                 <div style={{ background: 'rgba(224,82,82,.12)', border: '1px solid rgba(224,82,82,.3)', borderRadius: 14, padding: '16px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.red, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Total Pay</div>
+                  <div style={{ fontSize: 11, color: C.red, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{t.totalPay}</div>
                   <div style={{ fontSize: 24, fontWeight: 700, color: C.red }}>{fmt(empData.totalPay)}</div>
                 </div>
               </div>
-
-              {/* Per employee */}
               {empData.employees.length === 0
-                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>No timecard data found for this period.</div>
+                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>{t.noTimecardFound}</div>
                 : empData.employees.map((emp, ei) => (
                   <div key={ei} style={card}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -559,14 +579,14 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
                         <div style={{ fontSize: 18, fontWeight: 700 }}>{emp.name}</div>
                         <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>${PAY_RATES[emp.name.split(' ')[0]] || '—'}/hr</div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
+                      <div style={{ textAlign: isAr ? 'left' : 'right' }}>
                         <div style={{ fontSize: 20, fontWeight: 700, color: C.gold }}>{fmt(emp.totalPay)}</div>
                         <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{fmtH(emp.totalHours)}</div>
                       </div>
                     </div>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 300 }}>
-                        <thead><tr>{['Date','In','Out','Hours','Pay'].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+                        <thead><tr>{[t.date, t.loading.slice(0,2)==='جا'?'دخول':'In', t.loading.slice(0,2)==='جا'?'خروج':'Out', t.hours, t.pay].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
                         <tbody>{emp.shifts.map((s,si)=>(
                           <tr key={si}>
                             <td style={{...tdStyle,color:C.muted,fontSize:12}}>{s.date}</td>
@@ -589,23 +609,22 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
       {/* ── REPORTS ── */}
       {page === 'reports' && user.role === 'admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Reports & History</div>
-          <DateRange start={rptStart} end={rptEnd} onStart={setRptStart} onEnd={setRptEnd} />
-          <button style={btn} onClick={loadReport}>Pull Report</button>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.reportsHistory}</div>
+          <DateRange start={rptStart} end={rptEnd} onStart={setRptStart} onEnd={setRptEnd} lang={lang} />
+          <button style={btn} onClick={loadReport}>{t.pullReport}</button>
 
-          {rptLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div></div>}
+          {rptLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
 
           {rptData && !rptLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Summary */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
                 {[
-                  ['Cash Sales', fmt(rptData.totalCash), C.green],
-                  ['Card Sales', fmt(rptData.totalCard), C.blue],
-                  ['Total Sales', fmt(rptData.totalSales), C.gold],
-                  ['Cash Out', fmt(rptData.totalOut), C.red],
+                  [t.cashSales, fmt(rptData.totalCash), C.green],
+                  [t.cardSales, fmt(rptData.totalCard), C.blue],
+                  [t.total, fmt(rptData.totalSales), C.gold],
+                  [t.cashOut, fmt(rptData.totalOut), C.red],
                   ['P&L', fmt(rptData.totalPL), rptData.totalPL >= 0 ? C.green : C.red],
-                  ['Days', String(rptData.days?.length??0), C.muted],
+                  [t.days, String(rptData.days?.length??0), C.muted],
                 ].map(([l,v,c])=>(
                   <div key={l} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: c }}>{v}</div>
@@ -614,15 +633,14 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
                 ))}
               </div>
 
-              {/* Chart */}
               {rptData.days && rptData.days.length > 0 && (() => {
                 const maxVal = Math.max(...rptData.days.map(d => d.totalSales), 1);
                 return (
                   <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: 16 }}>
-                    <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>Daily Sales</div>
+                    <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>{t.dailySales}</div>
                     <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.muted }}><div style={{ width: 8, height: 8, borderRadius: 2, background: C.green }} />Cash</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.muted }}><div style={{ width: 8, height: 8, borderRadius: 2, background: C.blue }} />Card</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.muted }}><div style={{ width: 8, height: 8, borderRadius: 2, background: C.green }} />{t.cash}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.muted }}><div style={{ width: 8, height: 8, borderRadius: 2, background: C.blue }} />{t.card}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
                       {rptData.days.map((d,i)=>(
@@ -639,10 +657,9 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
                 );
               })()}
 
-              {/* Daily breakdown */}
               <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 420 }}>
-                  <thead><tr>{['Date','Cash','Card','Total','Out','P&L','Drawer'].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+                  <thead><tr>{[t.date, t.cash, t.card, t.total, t.out, 'P&L', t.drawer].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
                   <tbody>{[...rptData.days].reverse().map((d,i)=>(
                     <tr key={i}>
                       <td style={{...tdStyle,color:C.muted,fontSize:12}}>{d.date}</td>
@@ -657,13 +674,12 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
                 </table>
               </div>
 
-              {/* Cash out entries */}
               {rptData.cashOutEntries?.length > 0 && (
                 <div style={card}>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>Cash Out Entries</div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{t.cashOutEntries}</div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 380 }}>
-                      <thead><tr>{['Date','Time','Who','Amount','Reason','Note'].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+                      <thead><tr>{[t.date, t.time, t.who, t.amount, t.reason, t.note].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
                       <tbody>{rptData.cashOutEntries.map((e,i)=>(
                         <tr key={i}>
                           <td style={{...tdStyle,color:C.muted,fontSize:12}}>{e.date}</td>
@@ -695,7 +711,7 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
                 win.document.write(html); win.document.close();
                 setTimeout(()=>{ win.print(); setPdfLoading(false); }, 800);
               }} disabled={pdfLoading}>
-                {pdfLoading ? 'Generating...' : '📄 Export PDF'}
+                {pdfLoading ? (isAr ? 'جار الإنشاء...' : 'Generating...') : t.exportPDF}
               </button>
             </div>
           )}
@@ -714,8 +730,8 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
 
       {/* ── DETAIL SHEETS ── */}
       {activeSheet === 'cashout' && (
-        <Sheet title="Cash Out History" onClose={() => setActiveSheet(null)}>
-          <DateRange start={sheetStart} end={sheetEnd}
+        <Sheet title={t.cashOutHistory} onClose={() => setActiveSheet(null)} closeLabel={t.close}>
+          <DateRange start={sheetStart} end={sheetEnd} lang={lang}
             onStart={s => { setSheetStart(s); reloadSheet('cashout', s, sheetEnd); }}
             onEnd={e => { setSheetEnd(e); reloadSheet('cashout', sheetStart, e); }} />
           {sheetLoading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><RamLoader /></div>}
@@ -723,15 +739,14 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
                 <div style={{ background: C.surf2, borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Total Out</div>
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{t.totalOut}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: C.red }}>{fmt(sheetData.total)}</div>
                 </div>
                 <div style={{ background: C.surf2, borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Entries</div>
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{t.entries}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: C.gold }}>{sheetData.entries?.length || 0}</div>
                 </div>
               </div>
-              {/* By person */}
               {Object.keys(sheetData.byPerson||{}).length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   {Object.entries(sheetData.byPerson).sort((a,b)=>b[1]-a[1]).map(([name,amt])=>(
@@ -743,10 +758,10 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
                 </div>
               )}
               {!sheetData.entries?.length
-                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>No entries found.</div>
+                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>{t.noEntriesFound}</div>
                 : <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 340 }}>
-                      <thead><tr>{['Date','Time','Who','Amount','Reason'].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+                      <thead><tr>{[t.date, t.time, t.who, t.amount, t.reason].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
                       <tbody>{sheetData.entries.map((e,i)=>(
                         <tr key={i}>
                           <td style={{...tdStyle,color:C.muted,fontSize:12}}>{e.date}</td>
@@ -764,15 +779,15 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
       )}
 
       {activeSheet === 'sales' && (
-        <Sheet title="Sales History" onClose={() => setActiveSheet(null)}>
-          <DateRange start={sheetStart} end={sheetEnd}
+        <Sheet title={t.salesHistory} onClose={() => setActiveSheet(null)} closeLabel={t.close}>
+          <DateRange start={sheetStart} end={sheetEnd} lang={lang}
             onStart={s => { setSheetStart(s); reloadSheet('sales', s, sheetEnd); }}
             onEnd={e => { setSheetEnd(e); reloadSheet('sales', sheetStart, e); }} />
           {sheetLoading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><RamLoader /></div>}
           {sheetData && !sheetLoading && (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
-                {[['Cash', fmt(sheetData.totalCash), C.green],['Card', fmt(sheetData.totalCard), C.blue],['Total', fmt(sheetData.total), C.gold]].map(([l,v,c])=>(
+                {[[t.cash, fmt(sheetData.totalCash), C.green],[t.card, fmt(sheetData.totalCard), C.blue],[t.total, fmt(sheetData.total), C.gold]].map(([l,v,c])=>(
                   <div key={l} style={{ background: C.surf2, borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: c }}>{v}</div>
                     <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', marginTop: 3 }}>{l}</div>
@@ -780,10 +795,10 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
                 ))}
               </div>
               {!sheetData.days?.length
-                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>No sales found.</div>
+                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>{t.noSalesFound}</div>
                 : <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 300 }}>
-                      <thead><tr>{['Date','Cash','Card','Total'].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+                      <thead><tr>{[t.date, t.cash, t.card, t.total].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
                       <tbody>{[...sheetData.days].reverse().map((d,i)=>(
                         <tr key={i}>
                           <td style={{...tdStyle,color:C.muted,fontSize:12}}>{d.date}</td>
@@ -800,8 +815,8 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
       )}
 
       {activeSheet === 'pos' && (
-        <Sheet title="POS Cash In/Out History" onClose={() => setActiveSheet(null)}>
-          <DateRange start={sheetStart} end={sheetEnd}
+        <Sheet title={t.posHistory} onClose={() => setActiveSheet(null)} closeLabel={t.close}>
+          <DateRange start={sheetStart} end={sheetEnd} lang={lang}
             onStart={s => { setSheetStart(s); reloadSheet('pos', s, sheetEnd); }}
             onEnd={e => { setSheetEnd(e); reloadSheet('pos', sheetStart, e); }} />
           {sheetLoading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><RamLoader /></div>}
@@ -809,24 +824,24 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
                 <div style={{ background: C.surf2, borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>POS Cash In</div>
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{t.posIn}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: C.green }}>{fmt(sheetData.totalIn)}</div>
                 </div>
                 <div style={{ background: C.surf2, borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>POS Cash Out</div>
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{t.posOut}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: C.red }}>{fmt(sheetData.totalOut)}</div>
                 </div>
               </div>
               {!sheetData.events?.length
-                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>No POS events found.</div>
+                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>{t.noPOSFound}</div>
                 : <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 300 }}>
-                      <thead><tr>{['Date','Time','Type','Amount','Note'].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+                      <thead><tr>{[t.date, t.time, t.type, t.amount, t.note].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
                       <tbody>{sheetData.events.map((e,i)=>(
                         <tr key={i}>
                           <td style={{...tdStyle,color:C.muted,fontSize:12}}>{e.date}</td>
                           <td style={{...tdStyle,color:C.muted,fontSize:12}}>{e.time}</td>
-                          <td style={{...tdStyle,color:e.type==='PAID_IN'?C.green:C.red,fontWeight:600}}>{e.type==='PAID_IN'?'Pay In':'Pay Out'}</td>
+                          <td style={{...tdStyle,color:e.type==='PAID_IN'?C.green:C.red,fontWeight:600}}>{e.type==='PAID_IN'?t.payIn:t.payOut}</td>
                           <td style={{...tdStyle,color:e.type==='PAID_IN'?C.green:C.red,fontWeight:700}}>{e.type==='PAID_IN'?'+':'-'}{fmt(e.amount)}</td>
                           <td style={{...tdStyle,color:C.muted,fontSize:12}}>{e.description||'—'}</td>
                         </tr>
@@ -844,19 +859,19 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
           <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ width: 40, height: 4, background: '#2a2a35', borderRadius: 2, margin: '0 auto 6px' }} />
             <div style={{ fontSize: 36, textAlign: 'center' }}>💸</div>
-            <div style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }}>Confirm Cash Out</div>
-            <div style={{ fontSize: 14, color: C.muted, textAlign: 'center' }}>Review before submitting.</div>
+            <div style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }}>{t.confirmCashOut}</div>
+            <div style={{ fontSize: 14, color: C.muted, textAlign: 'center' }}>{t.reviewBefore}</div>
             <div style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '4px 16px' }}>
-              {[['Who',pending?.who],['Amount',fmt(pending?.amt)],['Reason',pending?.reason],pending?.note?['Note',pending.note]:null].filter(Boolean).map(([l,v],i,arr)=>(
+              {[[t.whoLabel, pending?.who],[t.amountLabel, fmt(pending?.amt)],[t.reasonLabel, pending?.reason], pending?.note?[t.noteLabel, pending.note]:null].filter(Boolean).map(([l,v],i,arr)=>(
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i<arr.length-1?`1px solid ${C.bord}`:'none' }}>
                   <span style={{ color: C.muted, fontSize: 15 }}>{l}</span>
-                  <span style={{ color: l==='Amount'?C.gold:'#fff', fontWeight: 600, fontSize: 15 }}>{v}</span>
+                  <span style={{ color: l===t.amountLabel?C.gold:'#fff', fontWeight: 600, fontSize: 15 }}>{v}</span>
                 </div>
               ))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <button style={btnG} onClick={() => setConfirmSheet(false)}>Cancel</button>
-              <button style={btn} onClick={submitOut}>Submit</button>
+              <button style={btnG} onClick={() => setConfirmSheet(false)}>{t.cancel}</button>
+              <button style={btn} onClick={submitOut}>{t.submit}</button>
             </div>
           </div>
         </div>
@@ -868,9 +883,9 @@ if (!match) { alert('This PIN is not in the system.\nPlease talk to Abdo Alasaad
           <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
             <div style={{ width: 40, height: 4, background: '#2a2a35', borderRadius: 2 }} />
             <div style={{ fontSize: 36 }}>✅</div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>Done!</div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>{t.done}</div>
             <div style={{ fontSize: 14, color: C.muted, textAlign: 'center' }}>{successMsg}</div>
-            <button style={{ ...btn, marginTop: 8 }} onClick={() => setSuccessSheet(false)}>Close</button>
+            <button style={{ ...btn, marginTop: 8 }} onClick={() => setSuccessSheet(false)}>{t.close}</button>
           </div>
         </div>
       )}
