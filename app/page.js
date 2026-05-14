@@ -926,7 +926,7 @@ if (match[0] === 'Fares') setFaresVideo(true);
   <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.95)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     onClick={() => setFaresVideo(false)}>
     <video
-      src="/fares.mp4"
+  src="https://drive.google.com/uc?export=download&id=1uobytQCOraf0a_u3KweK02xslVQg_EPt"
       autoPlay
       playsInline
       muted={false}
