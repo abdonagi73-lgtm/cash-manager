@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+const [pinAlert, setPinAlert] = useState(false);
 
 const LANG = {
   en: {
@@ -35,7 +36,7 @@ const LANG = {
     builtByFull: 'Built by', contactMe: 'Need help? Contact me',
   },
   ar: {
-    title: CHOICES FOR YOU', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
+    title: Choices For You', sub: 'مدير الأعمال', enterPin: 'أدخل رقم التعريف الشخصي لتسجيل الدخول',
     today: 'اليوم', cashOut: 'صرف نقدي', employees: 'الموظفون', reports: 'التقارير',
     liveToday: '● مباشر · اليوم', expectedDrawer: 'المتوقع في الصندوق',
     cashSales: 'مبيعات نقدية', cardSales: 'مبيعات بطاقة', manualOut: 'صرف يدوي',
@@ -98,11 +99,11 @@ function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d
 
 function MC({ label, value, sub, c1, c2, onClick, tapLabel }) {
   return (
-    <div onClick={onClick} style={{ background: c1, border: `1px solid ${c2}`, borderRadius: 16, padding: '16px 14px', cursor: onClick ? 'pointer' : 'default', position: 'relative' }}>
-      <div style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, color: c2 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: c2 }}>{value}</div>
+    <div onClick={onClick} style={{ background: c1, border: `1px solid ${c2}`, borderRadius: 16, padding: '16px 14px', cursor: onClick ? 'pointer' : 'default' }}>
+      <div style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, color: c2 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.2, color: c2 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#888', marginTop: 5 }}>{sub}</div>
-      {onClick && <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, color: c2, opacity: .6 }}>{tapLabel || 'tap for history ›'}</div>}
+      {onClick && <div style={{ fontSize: 10, color: c2, opacity: .6, marginTop: 6 }}>{tapLabel || 'tap for history ›'}</div>}
     </div>
   );
 }
@@ -288,7 +289,7 @@ export default function App() {
     const pval = p || pin;
     if (pval.length < 4) { setLoginErr(isAr ? 'أدخل رقم PIN المكون من 4 أرقام.' : 'Enter your 4-digit PIN.'); return; }
     const match = Object.entries(PINS).find(([, v]) => v.pin === pval);
-    if (!match) { alert(isAr ? 'هذا الرقم غير موجود في النظام.\nيرجى التواصل مع عبده الاسعدي للحصول على الصلاحية.' : 'This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'); setPin(''); return; }
+    if (!match) { setPinAlert(true); setPin(''); return; }
     const userData = { name: match[0], role: match[1].role };
     sessionStorage.setItem('cashUser', JSON.stringify(userData));
     setUser(userData); setLoginErr(''); setPin('');
@@ -361,7 +362,7 @@ export default function App() {
         </div>
         <div style={{ color: C.red, fontSize: 13, textAlign: 'center', minHeight: 20, marginBottom: 6 }}>{loginErr}</div>
         <div style={{ textAlign: 'center', marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
-          {t.builtByFull} <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />{t.contactMe}
+          {t.builtByFull} <strong style={{ color: C.gold }}>{isAr ? 'عبده الاسعدي' : 'Abdo Alasaadi'}</strong><br />{t.contactMe}
         </div>
       </div>
     </div>
@@ -497,7 +498,7 @@ export default function App() {
               </div>
 
               <div style={{ textAlign: 'center', padding: 14, borderTop: `1px solid ${C.bord}`, fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
-                {t.builtByFull} <strong style={{ color: C.gold }}>Abdo Alasaadi</strong><br />{t.contactMe}
+                {t.builtByFull} <strong style={{ color: C.gold }}>{isAr ? 'عبده الاسعدي' : 'Abdo Alasaadi'}</strong><br />{t.contactMe}
               </div>
             </>
           )}
@@ -891,6 +892,25 @@ export default function App() {
       )}
 
       {/* TOAST */}
+
+
+{/* PIN ALERT */}
+{pinAlert && (
+  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}>
+    <div style={{ background: '#1a1a20', border: '1px solid rgba(224,82,82,.4)', borderRadius: 24, padding: '32px 24px', width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
+      <div style={{ fontSize: 48 }}>🔒</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#e05252' }}>{isAr ? 'رقم غير موجود' : 'Access Denied'}</div>
+      <div style={{ fontSize: 14, color: '#888', lineHeight: 1.6 }}>
+        {isAr
+          ? 'هذا الرقم غير موجود في النظام.\nيرجى التواصل مع عبده الاسعدي للحصول على الصلاحية.'
+          : 'This PIN is not in the system.\nPlease talk to Abdo Alasaadi for access.'}
+      </div>
+      <button onClick={() => setPinAlert(false)} style={{ background: '#d4a843', border: 'none', borderRadius: 14, color: '#0f0f12', fontSize: 16, fontWeight: 700, padding: '14px 40px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 8 }}>
+        {isAr ? 'حسناً' : 'OK'}
+      </button>
+    </div>
+  </div>
+)}
       {toast && (
         <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: C.surf, border: `1px solid ${toast.type==='err'?'rgba(224,82,82,.5)':'rgba(212,168,67,.5)'}`, borderRadius: 14, padding: '13px 22px', fontSize: 14, zIndex: 200, whiteSpace: 'nowrap', color: toast.type==='err'?C.red:C.gold }}>
           {toast.msg}
