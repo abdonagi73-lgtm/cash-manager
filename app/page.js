@@ -244,8 +244,15 @@ export default function App() {
   }, [user, loadDash]);
 
   useEffect(() => {
-    try { const s = sessionStorage.getItem('cashUser'); if (s) setUser(JSON.parse(s)); } catch(e) {}
-  }, []);
+  try {
+    const s = sessionStorage.getItem('cashUser');
+    if (s) {
+      const u = JSON.parse(s);
+      setUser(u);
+      if (u.name === 'Fares') setFaresVideo(true);
+    }
+  } catch(e) {}
+}, []);
 
   const openDetailSheet = (type) => {
     setActiveSheet(type);
