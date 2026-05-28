@@ -482,14 +482,7 @@ export default function App() {
                     {diff === null ? '—' : Math.abs(diff) < 0.01 ? `✓ ${t.match}` : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div style={fld}><label style={flbl}>{t.openingDollar}</label><input style={inp} type="number" placeholder="200.00" inputMode="decimal" value={openingAmt} onChange={e => setOpeningAmt(e.target.value)} /></div>
-                  <div style={fld}><label style={flbl}>{t.closingDollar}</label><input style={inp} type="number" placeholder="850.00" inputMode="decimal" value={closingAmt} onChange={e => setClosingAmt(e.target.value)} /></div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button style={btnG} onClick={() => saveDrawer('opening')}>{t.setOpening}</button>
-                  <button style={btnG} onClick={() => saveDrawer('closing')}>{t.setClosing}</button>
-                </div>
+                
               </div>
               <div style={card}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -565,58 +558,138 @@ export default function App() {
       )}
 
       {page === 'employees' && user.role === 'admin' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.empHours}</div>
-          <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
-          <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
-          {empLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
-          {empData && !empLoading && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div style={{ background: 'rgba(212,168,67,.12)', border: '1px solid rgba(212,168,67,.3)', borderRadius: 14, padding: '16px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{t.totalHours}</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: C.gold }}>{fmtH(empData.totalHours)}</div>
-                </div>
-                <div style={{ background: 'rgba(224,82,82,.12)', border: '1px solid rgba(224,82,82,.3)', borderRadius: 14, padding: '16px 14px' }}>
-                  <div style={{ fontSize: 11, color: C.red, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{t.totalPay}</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: C.red }}>{fmt(empData.totalPay)}</div>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
+    <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.empHours}</div>
+    <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
+    <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
+
+    {empLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
+
+    {empData && !empLoading && (
+      <>
+        {/* Summary totals */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+          {empData.employees.map(emp => (
+            <div key={emp.name} style={{ background: Math.abs(emp.runningBalance) < 0.01 ? 'rgba(45,182,125,.12)' : emp.runningBalance > 0 ? 'rgba(91,138,240,.12)' : 'rgba(224,82,82,.12)', border: `1px solid ${Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{emp.name}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>{emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{emp.runningBalance > 0.01 ? 'store owes' : emp.runningBalance < -0.01 ? 'over-taken' : 'settled'}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Fares section */}
+        {empData.fares && empData.fares.total > 0 && (
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>Fares</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: C.red }}>{fmt(empData.fares.total)}</div>
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total taken from register</div>
+            {empData.fares.byCategory.map((cat, i) => (
+              <div key={i}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.gold, marginBottom: 6 }}>{cat.category} — {fmt(cat.total)}</div>
+                {cat.entries.map((e, ei) => (
+                  <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid rgba(255,255,255,.04)`, fontSize: 13 }}>
+                    <div>
+                      <span style={{ color: C.muted, fontSize: 12 }}>{e.date} {e.time} </span>
+                      <span style={{ color: '#ccc' }}>{e.description}</span>
+                    </div>
+                    <div style={{ color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Per employee pay periods */}
+        {empData.employees.map(emp => (
+          <div key={emp.name} style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{emp.name}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>${emp.rate}/hr · {fmtH(emp.totalHours)} · Expected: {fmt(emp.totalExpected)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 11, color: C.muted }}>Taken: {fmt(emp.totalTaken)}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>
+                  Balance: {emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}
                 </div>
               </div>
-              {empData.employees.length === 0
-                ? <div style={{ textAlign: 'center', padding: 32, color: C.muted }}>{t.noTimecardFound}</div>
-                : empData.employees.map((emp, ei) => (
-                  <div key={ei} style={card}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{ fontSize: 18, fontWeight: 700 }}>{emp.name}</div>
-                        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>${PAY_RATES[emp.name.split(' ')[0]] || '—'}/hr</div>
+            </div>
+
+            {emp.periods.map((p, pi) => (
+              <div key={pi} style={{ background: C.surf2, borderRadius: 12, padding: 14 }}>
+                {/* Period header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>📅 {p.period}</div>
+                    {p.carryIn !== 0 && (
+                      <div style={{ fontSize: 11, color: p.carryIn > 0 ? C.blue : C.red, marginTop: 3 }}>
+                        Carry-in from last week: {p.carryIn > 0 ? '+' : ''}{fmt(p.carryIn)}
                       </div>
-                      <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: C.gold }}>{fmt(emp.totalPay)}</div>
-                        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{fmtH(emp.totalHours)}</div>
-                      </div>
-                    </div>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 300 }}>
-                        <thead><tr>{[t.date, isAr?'دخول':'In', isAr?'خروج':'Out', t.hours, t.pay].map(h=><th key={h} style={thStyle}>{h}</th>)}</tr></thead>
-                        <tbody>{emp.shifts.map((s,si)=>(
-                          <tr key={si}>
-                            <td style={{...tdStyle,color:C.muted,fontSize:12}}>{s.date}</td>
-                            <td style={{...tdStyle,fontSize:13}}>{s.startTime}</td>
-                            <td style={{...tdStyle,fontSize:13}}>{s.endTime}</td>
-                            <td style={{...tdStyle,color:C.blue}}>{fmtH(s.hours)}</td>
-                            <td style={{...tdStyle,color:C.gold,fontWeight:600}}>{fmt(s.pay)}</td>
-                          </tr>
-                        ))}</tbody>
-                      </table>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 12, color: C.muted }}>{fmtH(p.hours)} · {fmt(p.expectedPay)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: Math.abs(p.closingBalance) < 0.01 ? C.green : p.closingBalance > 0 ? C.blue : C.red }}>
+                      {p.closingBalance > 0 ? '↑ Owed ' : p.closingBalance < 0 ? '↓ Over ' : '✓ '}{fmt(Math.abs(p.closingBalance))}
                     </div>
                   </div>
-                ))
-              }
-            </>
-          )}
-        </div>
-      )}
+                </div>
+
+                {/* Timecard shifts */}
+                {p.shifts.length > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Timecards</div>
+                    {p.shifts.map((s, si) => (
+                      <div key={si} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                        <span style={{ color: C.muted }}>{s.startTime} → {s.endTime}</span>
+                        <span style={{ color: C.blue }}>{fmtH(s.hours)} · {fmt(s.pay)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Payouts by category */}
+                {p.payouts.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Taken from Register</div>
+                    {p.payouts.map((cat, ci) => (
+                      <div key={ci} style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: C.gold, marginBottom: 4 }}>{cat.category} — {fmt(cat.total)}</div>
+                        {cat.entries.map((e, ei) => (
+                          <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0 3px 10px', borderBottom: `1px solid rgba(255,255,255,.03)` }}>
+                            <span style={{ color: C.muted }}>{e.date} — {e.description}</span>
+                            <span style={{ color: C.red }}>{fmt(e.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {p.payouts.length === 0 && (
+                  <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>No payouts recorded this period</div>
+                )}
+
+                {/* Period summary */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: `1px solid rgba(255,255,255,.08)`, fontSize: 12 }}>
+                  <span style={{ color: C.muted }}>Expected: {fmt(p.expectedPay)} · Taken: {fmt(p.totalTaken)}</span>
+                  <span style={{ color: Math.abs(p.periodBalance) < 0.01 ? C.green : p.periodBalance > 0 ? C.blue : C.red, fontWeight: 600 }}>
+                    Period: {p.periodBalance > 0 ? '+' : ''}{fmt(p.periodBalance)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </>
+    )}
+  </div> )}
+ 
+  )}
 
       {page === 'reports' && user.role === 'admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
