@@ -569,7 +569,7 @@ export default function App() {
       <>
         {/* Summary totals */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
-          {empData.employees.map(emp => (
+          {(empData.employees || []).map(emp => (
             <div key={emp.name} style={{ background: Math.abs(emp.runningBalance) < 0.01 ? 'rgba(45,182,125,.12)' : emp.runningBalance > 0 ? 'rgba(91,138,240,.12)' : 'rgba(224,82,82,.12)', border: `1px solid ${Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{emp.name}</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>{emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}</div>
@@ -586,7 +586,7 @@ export default function App() {
               <div style={{ fontSize: 18, fontWeight: 700, color: C.red }}>{fmt(empData.fares.total)}</div>
             </div>
             <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total taken from register</div>
-            {empData.fares.byCategory.map((cat, i) => (
+            {(empData.fares?.byCategory || []).map((cat, i) => (
               <div key={i}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.gold, marginBottom: 6 }}>{cat.category} — {fmt(cat.total)}</div>
                 {cat.entries.map((e, ei) => (
@@ -604,7 +604,7 @@ export default function App() {
         )}
 
         {/* Per employee pay periods */}
-        {empData.employees.map(emp => (
+        {(empData.employees || []).map(emp => (
           <div key={emp.name} style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
