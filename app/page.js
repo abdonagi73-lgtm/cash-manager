@@ -565,7 +565,7 @@ export default function App() {
 
     {empLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
 
-    {empData && !empLoading && (
+    {empData && !empLoading && empData.employees && (
       <>
         {/* Summary totals */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
