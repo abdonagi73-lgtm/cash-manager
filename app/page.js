@@ -200,8 +200,6 @@ export default function App() {
   const [dash, setDash] = useState(null);
   const [dashLoading, setDashLoading] = useState(true);
   const [actual, setActual] = useState('');
-  const [openingAmt, setOpeningAmt] = useState('');
-  const [closingAmt, setClosingAmt] = useState('');
   const [outWho, setOutWho] = useState('');
   const [outAmt, setOutAmt] = useState('');
   const [outReason, setOutReason] = useState('');
@@ -309,14 +307,6 @@ export default function App() {
   const diff = actual !== '' && !isNaN(parseFloat(actual)) ? parseFloat(actual) - expectedInDrawer : null;
   const lowDrawer = dash && expectedInDrawer < lowDrawerThreshold && expectedInDrawer > 0;
 
-  const saveDrawer = (type) => {
-    const val = parseFloat(type === 'opening' ? openingAmt : closingAmt);
-    if (!val || val <= 0) { showToast(isAr ? 'أدخل مبلغاً صحيحاً.' : 'Enter a valid amount.', 'err'); return; }
-    callScript('setDrawer', { type, amount: val, who: user.name })
-      .then(() => { showToast(`${type === 'opening' ? t.opening : t.closing} → ${fmt(val)}`); loadDash(); })
-      .catch(() => showToast('Error', 'err'));
-  };
-
   const confirmOut = () => {
     if (!outWho) { showToast(isAr ? 'اختر الاسم.' : 'Select who.', 'err'); return; }
     if (!outAmt || parseFloat(outAmt) <= 0) { showToast(isAr ? 'أدخل مبلغاً صحيحاً.' : 'Enter a valid amount.', 'err'); return; }
@@ -400,6 +390,7 @@ export default function App() {
   return (
     <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', fontSize: 16 }}>
 
+      {/* TOPBAR */}
       <div style={{ background: C.surf, borderBottom: `1px solid ${C.bord}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 56, position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', background: '#111', borderRadius: 8, padding: 3 }} />
@@ -415,6 +406,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* TODAY */}
       {page === 'today' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.liveToday}</div>
@@ -482,7 +474,6 @@ export default function App() {
                     {diff === null ? '—' : Math.abs(diff) < 0.01 ? `✓ ${t.match}` : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
                   </div>
                 </div>
-                
               </div>
               <div style={card}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -514,6 +505,7 @@ export default function App() {
         </div>
       )}
 
+      {/* CASH OUT */}
       {page === 'cashout' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.reportCashOut}</div>
@@ -557,140 +549,142 @@ export default function App() {
         </div>
       )}
 
+      {/* EMPLOYEES */}
       {page === 'employees' && user.role === 'admin' && (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-    <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.empHours}</div>
-    <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
-    <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.empHours}</div>
+          <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
+          <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
 
-    {empLoading && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}><RamLoader /><div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div></div>}
-
-    {empData && !empLoading && empData.employees && (
-      <>
-        {/* Summary totals */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
-          {(empData.employees || []).map(emp => (
-            <div key={emp.name} style={{ background: Math.abs(emp.runningBalance) < 0.01 ? 'rgba(45,182,125,.12)' : emp.runningBalance > 0 ? 'rgba(91,138,240,.12)' : 'rgba(224,82,82,.12)', border: `1px solid ${Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{emp.name}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>{emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}</div>
-              <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{emp.runningBalance > 0.01 ? 'store owes' : emp.runningBalance < -0.01 ? 'over-taken' : 'settled'}</div>
+          {empLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}>
+              <RamLoader />
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div>
             </div>
-          ))}
-        </div>
+          )}
 
-        {/* Fares section */}
-        {empData.fares && empData.fares.total > 0 && (
-          <div style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>Fares</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: C.red }}>{fmt(empData.fares.total)}</div>
-            </div>
-            <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total taken from register</div>
-            {(empData.fares?.byCategory || []).map((cat, i) => (
-              <div key={i}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.gold, marginBottom: 6 }}>{cat.category} — {fmt(cat.total)}</div>
-                {cat.entries.map((e, ei) => (
-                  <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid rgba(255,255,255,.04)`, fontSize: 13 }}>
-                    <div>
-                      <span style={{ color: C.muted, fontSize: 12 }}>{e.date} {e.time} </span>
-                      <span style={{ color: '#ccc' }}>{e.description}</span>
-                    </div>
-                    <div style={{ color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</div>
+          {empData && !empLoading && (
+            <>
+              {/* Summary balance cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                {(empData.employees || []).map(emp => (
+                  <div key={emp.name} style={{ background: Math.abs(emp.runningBalance) < 0.01 ? 'rgba(45,182,125,.12)' : emp.runningBalance > 0 ? 'rgba(91,138,240,.12)' : 'rgba(224,82,82,.12)', border: `1px solid ${Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{emp.name}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>{emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{emp.runningBalance > 0.01 ? 'store owes' : emp.runningBalance < -0.01 ? 'over-taken' : 'settled'}</div>
                   </div>
                 ))}
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* Per employee pay periods */}
-        {(empData.employees || []).map(emp => (
-          <div key={emp.name} style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 700 }}>{emp.name}</div>
-                <div style={{ fontSize: 12, color: C.muted }}>${emp.rate}/hr · {fmtH(emp.totalHours)} · Expected: {fmt(emp.totalExpected)}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: C.muted }}>Taken: {fmt(emp.totalTaken)}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>
-                  Balance: {emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}
-                </div>
-              </div>
-            </div>
-
-            {emp.periods.map((p, pi) => (
-              <div key={pi} style={{ background: C.surf2, borderRadius: 12, padding: 14 }}>
-                {/* Period header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>📅 {p.period}</div>
-                    {p.carryIn !== 0 && (
-                      <div style={{ fontSize: 11, color: p.carryIn > 0 ? C.blue : C.red, marginTop: 3 }}>
-                        Carry-in from last week: {p.carryIn > 0 ? '+' : ''}{fmt(p.carryIn)}
-                      </div>
-                    )}
+              {/* Fares section */}
+              {empData.fares && empData.fares.total > 0 && (
+                <div style={card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>Fares</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.red }}>{fmt(empData.fares.total)}</div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 12, color: C.muted }}>{fmtH(p.hours)} · {fmt(p.expectedPay)}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: Math.abs(p.closingBalance) < 0.01 ? C.green : p.closingBalance > 0 ? C.blue : C.red }}>
-                      {p.closingBalance > 0 ? '↑ Owed ' : p.closingBalance < 0 ? '↓ Over ' : '✓ '}{fmt(Math.abs(p.closingBalance))}
+                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total taken from register</div>
+                  {(empData.fares.byCategory || []).map((cat, i) => (
+                    <div key={i}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.gold, marginBottom: 6 }}>{cat.category} — {fmt(cat.total)}</div>
+                      {(cat.entries || []).map((e, ei) => (
+                        <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid rgba(255,255,255,.04)`, fontSize: 13 }}>
+                          <div>
+                            <span style={{ color: C.muted, fontSize: 12 }}>{e.date} {e.time} </span>
+                            <span style={{ color: '#ccc' }}>{e.description}</span>
+                          </div>
+                          <div style={{ color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Per employee pay periods */}
+              {(empData.employees || []).map(emp => (
+                <div key={emp.name} style={card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 20, fontWeight: 700 }}>{emp.name}</div>
+                      <div style={{ fontSize: 12, color: C.muted }}>${emp.rate}/hr · {fmtH(emp.totalHours)} · Expected: {fmt(emp.totalExpected)}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: C.muted }}>Taken: {fmt(emp.totalTaken)}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>
+                        Balance: {emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Timecard shifts */}
-                {p.shifts.length > 0 && (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Timecards</div>
-                    {p.shifts.map((s, si) => (
-                      <div key={si} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
-                        <span style={{ color: C.muted }}>{s.startTime} → {s.endTime}</span>
-                        <span style={{ color: C.blue }}>{fmtH(s.hours)} · {fmt(s.pay)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Payouts by category */}
-                {p.payouts.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Taken from Register</div>
-                    {p.payouts.map((cat, ci) => (
-                      <div key={ci} style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: C.gold, marginBottom: 4 }}>{cat.category} — {fmt(cat.total)}</div>
-                        {cat.entries.map((e, ei) => (
-                          <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0 3px 10px', borderBottom: `1px solid rgba(255,255,255,.03)` }}>
-                            <span style={{ color: C.muted }}>{e.date} — {e.description}</span>
-                            <span style={{ color: C.red }}>{fmt(e.amount)}</span>
+                  {(emp.periods || []).map((p, pi) => (
+                    <div key={pi} style={{ background: C.surf2, borderRadius: 12, padding: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>📅 {p.period}</div>
+                          {p.carryIn !== 0 && (
+                            <div style={{ fontSize: 11, color: p.carryIn > 0 ? C.blue : C.red, marginTop: 3 }}>
+                              Carry-in from last week: {p.carryIn > 0 ? '+' : ''}{fmt(p.carryIn)}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 12, color: C.muted }}>{fmtH(p.hours)} · {fmt(p.expectedPay)}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: Math.abs(p.closingBalance) < 0.01 ? C.green : p.closingBalance > 0 ? C.blue : C.red }}>
+                            {p.closingBalance > 0 ? '↑ Owed ' : p.closingBalance < 0 ? '↓ Over ' : '✓ '}{fmt(Math.abs(p.closingBalance))}
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                {p.payouts.length === 0 && (
-                  <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>No payouts recorded this period</div>
-                )}
+                      {(p.shifts || []).length > 0 && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Timecards</div>
+                          {(p.shifts || []).map((s, si) => (
+                            <div key={si} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                              <span style={{ color: C.muted }}>{s.startTime} → {s.endTime}</span>
+                              <span style={{ color: C.blue }}>{fmtH(s.hours)} · {fmt(s.pay)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                {/* Period summary */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: `1px solid rgba(255,255,255,.08)`, fontSize: 12 }}>
-                  <span style={{ color: C.muted }}>Expected: {fmt(p.expectedPay)} · Taken: {fmt(p.totalTaken)}</span>
-                  <span style={{ color: Math.abs(p.periodBalance) < 0.01 ? C.green : p.periodBalance > 0 ? C.blue : C.red, fontWeight: 600 }}>
-                    Period: {p.periodBalance > 0 ? '+' : ''}{fmt(p.periodBalance)}
-                  </span>
+                      {(p.payouts || []).length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Taken from Register</div>
+                          {(p.payouts || []).map((cat, ci) => (
+                            <div key={ci} style={{ marginBottom: 8 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: C.gold, marginBottom: 4 }}>{cat.category} — {fmt(cat.total)}</div>
+                              {(cat.entries || []).map((e, ei) => (
+                                <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0 3px 10px', borderBottom: `1px solid rgba(255,255,255,.03)` }}>
+                                  <span style={{ color: C.muted }}>{e.date} — {e.description}</span>
+                                  <span style={{ color: C.red }}>{fmt(e.amount)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {(p.payouts || []).length === 0 && (
+                        <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>No payouts recorded this period</div>
+                      )}
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: `1px solid rgba(255,255,255,.08)`, fontSize: 12 }}>
+                        <span style={{ color: C.muted }}>Expected: {fmt(p.expectedPay)} · Taken: {fmt(p.totalTaken)}</span>
+                        <span style={{ color: Math.abs(p.periodBalance) < 0.01 ? C.green : p.periodBalance > 0 ? C.blue : C.red, fontWeight: 600 }}>
+                          Period: {p.periodBalance > 0 ? '+' : ''}{fmt(p.periodBalance)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </>
-    )}
-  </div> )}
- 
-  )}
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
+      {/* REPORTS */}
       {page === 'reports' && user.role === 'admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.reportsHistory}</div>
@@ -787,6 +781,7 @@ export default function App() {
         </div>
       )}
 
+      {/* BOTTOM NAV */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.surf, borderTop: `1px solid ${C.bord}`, display: 'flex', zIndex: 40 }}>
         {tabs.map(([id,ic,lb])=>(
           <button key={id} onClick={()=>setPage(id)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px 10px', cursor: 'pointer', background: 'none', border: 'none', color: page===id?C.gold:C.muted, gap: 5, fontFamily: 'inherit' }}>
@@ -796,6 +791,7 @@ export default function App() {
         ))}
       </div>
 
+      {/* DETAIL SHEETS */}
       {activeSheet === 'cashout' && (
         <Sheet title={t.cashOutHistory} onClose={() => setActiveSheet(null)} closeLabel={t.close}>
           <DateRange start={sheetStart} end={sheetEnd} lang={lang}
@@ -920,6 +916,7 @@ export default function App() {
         </Sheet>
       )}
 
+      {/* CONFIRM SHEET */}
       {confirmSheet && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={e=>e.target===e.currentTarget&&setConfirmSheet(false)}>
           <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -943,6 +940,7 @@ export default function App() {
         </div>
       )}
 
+      {/* SUCCESS SHEET */}
       {successSheet && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={e=>e.target===e.currentTarget&&setSuccessSheet(false)}>
           <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
@@ -955,19 +953,14 @@ export default function App() {
         </div>
       )}
 
-      {/* FARES VIDEO — plays every time Fares logs in */}
+      {/* FARES VIDEO */}
       {faresVideo && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.95)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setFaresVideo(false)}>
-          <video
-            src="/fares.mp4"
-            autoPlay
-            playsInline
-            style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: 16 }}
-            onEnded={() => setFaresVideo(false)}
-          />
+          <video src="/fares.mp4" autoPlay playsInline style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: 16 }} onEnded={() => setFaresVideo(false)} />
         </div>
       )}
 
+      {/* TOAST */}
       {toast && (
         <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: C.surf, border: `1px solid ${toast.type==='err'?'rgba(224,82,82,.5)':'rgba(212,168,67,.5)'}`, borderRadius: 14, padding: '13px 22px', fontSize: 14, zIndex: 200, whiteSpace: 'nowrap', color: toast.type==='err'?C.red:C.gold }}>
           {toast.msg}
