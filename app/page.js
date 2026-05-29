@@ -288,6 +288,12 @@ const [adjSubmitting, setAdjSubmitting] = useState(false);
       .then(d => { setEmpData(d); setEmpLoading(false); })
       .catch(() => { showToast('Error', 'err'); setEmpLoading(false); });
   };
+  const loadLedger = () => {
+  setLedgerLoading(true); setLedger(null);
+  callScript('getEmployeeLedger')
+    .then(d => { setLedger(d); setLedgerLoading(false); })
+    .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
+};
 
   // REPLACE with:
 const loadLedger = () => {
@@ -569,30 +575,6 @@ useEffect(() => {
         </div>
       )}
 
-// ═══════════════════════════════════════════════════════════════════════
-// EMPLOYEE LEDGER TAB — Replace the existing {page === 'employees'} block
-// in page.js with this code.
-//
-// ALSO ADD to state declarations (near the top of App()):
-//   const [ledger, setLedger] = useState(null);
-//   const [ledgerLoading, setLedgerLoading] = useState(false);
-//   const [ledgerDetail, setLedgerDetail] = useState(null); // employee name to show detail sheet
-//   const [adjEmployee, setAdjEmployee] = useState('');
-//   const [adjAmount, setAdjAmount] = useState('');
-//   const [adjNote, setAdjNote] = useState('');
-//   const [adjSubmitting, setAdjSubmitting] = useState(false);
-//
-// ALSO ADD loadLedger function (near loadEmployees):
-//   const loadLedger = () => {
-//     setLedgerLoading(true); setLedger(null);
-//     callScript('getEmployeeLedger')
-//       .then(d => { setLedger(d); setLedgerLoading(false); })
-//       .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
-//   };
-//
-// ALSO ADD to the useEffect that triggers on page change:
-//   if (page === 'employees' && !ledger) loadLedger();
-// ═══════════════════════════════════════════════════════════════════════
 
 {page === 'employees' && user.role === 'admin' && (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
