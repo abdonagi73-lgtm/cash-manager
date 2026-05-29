@@ -288,12 +288,7 @@ const [adjSubmitting, setAdjSubmitting] = useState(false);
       .then(d => { setEmpData(d); setEmpLoading(false); })
       .catch(() => { showToast('Error', 'err'); setEmpLoading(false); });
   };
-  const loadLedger = () => {
-  setLedgerLoading(true); setLedger(null);
-  callScript('getEmployeeLedger')
-    .then(d => { setLedger(d); setLedgerLoading(false); })
-    .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
-};
+
 
   // REPLACE with:
 const loadLedger = () => {
