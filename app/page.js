@@ -1031,19 +1031,26 @@ const loadLedger = () => {
             <>
               {/* Revenue / Cost / Profit */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {[
-                  ['Revenue', fmt(bizData.totalRevenue), C.green],
-                  ['Total Costs', fmt(bizData.totalCosts), C.red],
-                  ['Net Profit', fmt(bizData.netProfit), bizData.netProfit >= 0 ? C.green : C.red],
-                ].map(([l,v,c]) => (
-                  <div key={l} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: c }}>{v}</div>
-                    <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>{l}</div>
-                  </div>
-                ))}
-              </div>
+  {[
+    ['Revenue', fmt(bizData.totalRevenue), C.green],
+    ['COGS', fmt(bizData.totalCOGS), C.red],
+    ['Gross Profit', fmt(bizData.grossProfit), bizData.grossProfit >= 0 ? C.green : C.red],
+    ['Expenses', fmt(bizData.totalExpenses), C.red],
+    ['Payroll', fmt(bizData.totalPayroll), C.red],
+    ['Net Profit', fmt(bizData.netProfit), bizData.netProfit >= 0 ? C.green : C.red],
+  ].map(([l,v,c]) => (
+    <div key={l} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: c }}>{v}</div>
+      <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>{l}</div>
+    </div>
+  ))}
+</div>
 
               {/* Cost breakdown */}
+			  <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <div style={{ fontSize: 14, color: C.muted }}>Gross Profit Margin</div>
+  <div style={{ fontSize: 22, fontWeight: 700, color: C.gold }}>{bizData.profitMargin}%</div>
+</div>
               <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Cost Breakdown</div>
                 {[
