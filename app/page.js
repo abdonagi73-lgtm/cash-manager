@@ -227,6 +227,9 @@ export default function App() {
   const [ledger, setLedger] = useState(null);
 const [ledgerLoading, setLedgerLoading] = useState(false);
 const [ledgerDetail, setLedgerDetail] = useState(null);
+  const [ledgerStart, setLedgerStart] = useState('2026-01-01');
+  const [ledgerEnd, setLedgerEnd] = useState(today());
+  const [expandedShifts, setExpandedShifts] = useState(null);
 const [adjEmployee, setAdjEmployee] = useState('');
 const [adjAmount, setAdjAmount] = useState('');
 const [adjNote, setAdjNote] = useState('');
@@ -302,9 +305,9 @@ const [adjSubmitting, setAdjSubmitting] = useState(false);
 
 
   // REPLACE with:
-const loadLedger = () => {
+const loadLedger = (start, end) => {
   setLedgerLoading(true); setLedger(null);
-  callScript('getEmployeeLedger')
+  callScript('getEmployeeLedger', { start: start || ledgerStart, end: end || ledgerEnd })
     .then(d => { setLedger(d); setLedgerLoading(false); })
     .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
 };
@@ -612,10 +615,48 @@ const loadLedger = () => {
         )}
       </div>
       <button style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: C.gold, fontSize: 13, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
-        onClick={loadLedger} disabled={ledgerLoading}>
+        onClick={() => loadLedger()} disabled={ledgerLoading}>
         {ledgerLoading ? '…' : '↻ Refresh'}
       </button>
     </div>
+
+    {/* ── Date Range Presets ── */}
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {(() => {
+        const _today = today();
+        const _yr = new Date().getFullYear();
+        const _d = new Date();
+        const _wk = new Date(_d); _wk.setDate(_d.getDate() - _d.getDay());
+        const _lwk = new Date(_d); _lwk.setDate(_d.getDate() - _d.getDay() - 7);
+        const _lwkEnd = new Date(_d); _lwkEnd.setDate(_d.getDate() - _d.getDay() - 1);
+        const _mo = new Date(_d.getFullYear(), _d.getMonth(), 1);
+        const _lmo = new Date(_d.getFullYear(), _d.getMonth() - 1, 1);
+        const _lmoEnd = new Date(_d.getFullYear(), _d.getMonth(), 0);
+        const _fmt = dt => dt.toISOString().split('T')[0];
+        return [
+          ['Today',      _today,              _today],
+          ['This Week',  _fmt(_wk),           _today],
+          ['Last Week',  _fmt(_lwk),          _fmt(_lwkEnd)],
+          ['This Month', _fmt(_mo),           _today],
+          ['Last Month', _fmt(_lmo),          _fmt(_lmoEnd)],
+          ['This Year',  `${_yr}-01-01`,      _today],
+          ['Last Year',  `${_yr-1}-01-01`,    `${_yr-1}-12-31`],
+          ['All Time',   '2020-01-01',         _today],
+        ];
+      })().map(([label, s, e]) => (
+        <button key={label} onClick={() => { setLedgerStart(s); setLedgerEnd(e); loadLedger(s, e); }}
+          style={{ background: ledgerStart === s && ledgerEnd === e ? 'rgba(212,168,67,.25)' : C.surf2, border: `1px solid ${ledgerStart === s && ledgerEnd === e ? C.gold : C.bord}`, borderRadius: 20, color: ledgerStart === s && ledgerEnd === e ? C.gold : C.muted, cursor: 'pointer', fontSize: 11, padding: '5px 12px', fontFamily: 'inherit' }}>
+          {label}
+        </button>
+      ))}
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <input style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: '#fff', fontSize: 14, padding: '10px 12px', outline: 'none', fontFamily: 'inherit' }}
+        type="date" value={ledgerStart} onChange={e => setLedgerStart(e.target.value)} />
+      <input style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: '#fff', fontSize: 14, padding: '10px 12px', outline: 'none', fontFamily: 'inherit' }}
+        type="date" value={ledgerEnd} onChange={e => setLedgerEnd(e.target.value)} />
+    </div>
+    <button style={{ ...btn, marginBottom: 4 }} onClick={() => loadLedger()}>Load Ledger</button>
 
     {/* ── Loading ── */}
     {ledgerLoading && (
@@ -675,16 +716,41 @@ const loadLedger = () => {
                 {/* ── Stats Grid ── */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, borderBottom: `1px solid ${C.bord}` }}>
                   {[
-                    ['Hours Worked', fmtH(emp.totalHours), '#fff'],
-                    ['Total Earned', fmt(emp.totalEarned), C.blue],
-                    ['Total Paid', fmt(emp.totalPaid), C.muted],
-                  ].map(([label, val, color], i) => (
-                    <div key={label} style={{ padding: '12px 14px', borderRight: i < 2 ? `1px solid ${C.bord}` : 'none' }}>
-                      <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 5 }}>{label}</div>
+                    ['Hours Worked', fmtH(emp.totalHours), '#fff', true],
+                    ['Total Earned', fmt(emp.totalEarned), C.blue, false],
+                    ['Total Paid', fmt(emp.totalPaid), C.muted, false],
+                  ].map(([label, val, color, clickable], i) => (
+                    <div key={label}
+                      onClick={clickable ? () => setExpandedShifts(expandedShifts === emp.name ? null : emp.name) : undefined}
+                      style={{ padding: '12px 14px', borderRight: i < 2 ? `1px solid ${C.bord}` : 'none', cursor: clickable ? 'pointer' : 'default', background: clickable && expandedShifts === emp.name ? 'rgba(255,255,255,.05)' : 'transparent' }}>
+                      <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 5 }}>{label}{clickable ? ' ›' : ''}</div>
                       <div style={{ fontSize: 16, fontWeight: 700, color }}>{val}</div>
                     </div>
                   ))}
                 </div>
+
+                {/* ── Shifts Expansion ── */}
+                {expandedShifts === emp.name && (
+                  <div style={{ borderTop: `1px solid ${C.bord}`, padding: '12px 14px', background: 'rgba(255,255,255,.02)' }}>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>Shift Details</div>
+                    {emp.shifts && emp.shifts.length > 0 ? emp.shifts.slice().reverse().map((s, si) => (
+                      <div key={si} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '6px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                        <div>
+                          <div style={{ color: '#fff', fontWeight: 500 }}>{s.date}</div>
+                          <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{s.startTime} → {s.endTime}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ color: C.blue, fontWeight: 600 }}>{fmtH(s.hours)}</div>
+                          <div style={{ color: C.muted, fontSize: 11 }}>{fmt(s.pay)}</div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>
+                        {emp.name === 'Fares' ? 'Salaried — no timecards' : emp.name === 'Badr' ? 'Owner — no timecards' : 'No shifts found for this period'}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Additional Stats ── */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
