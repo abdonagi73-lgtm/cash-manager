@@ -298,12 +298,28 @@ const loadLedger = () => {
     .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
 };
 
-useEffect(() => {
-  if (page === 'employees') {
-    if (!empData) loadEmployees();
-    if (!ledger) loadLedger();
-  }
-}, [page]);
+  const loadExpenses = () => {
+    setExpLoading(true); setExpData(null);
+    callScript('getExpenses', { start: expStart, end: expEnd })
+      .then(d => { setExpData(d); setExpLoading(false); })
+      .catch(() => { showToast('Error loading expenses', 'err'); setExpLoading(false); });
+  };
+
+  const loadBiz = () => {
+    setBizLoading(true); setBizData(null);
+    callScript('getBusinessDashboard', { start: bizStart, end: bizEnd })
+      .then(d => { setBizData(d); setBizLoading(false); })
+      .catch(() => { showToast('Error loading dashboard', 'err'); setBizLoading(false); });
+  };
+
+  useEffect(() => {
+    if (page === 'employees') {
+      if (!empData) loadEmployees();
+      if (!ledger) loadLedger();
+    }
+    if (page === 'expenses' && !expData) loadExpenses();
+    if (page === 'business' && !bizData) loadBiz();
+  }, [page]);
 
   const addPin = (k) => {
     if (pin.length >= 4) return;
