@@ -668,8 +668,8 @@ const loadLedger = (start, end) => {
 
     {/* ── Balance Cards Grid ── */}
     {ledger && !ledgerLoading && (() => {
-      const totalOwedByBusiness  = ledger.ledger.filter(e => e.balance > 0.01).reduce((s,e) => s + e.balance, 0);
-      const totalOwedByEmployees = ledger.ledger.filter(e => e.balance < -0.01).reduce((s,e) => s + Math.abs(e.balance), 0);
+      const totalOwedByBusiness  = (ledger?.ledger || []).filter(e => e.balance > 0.01).reduce((s,e) => s + e.balance, 0);
+      const totalOwedByEmployees = (ledger?.ledger || []).filter(e => e.balance < -0.01).reduce((s,e) => s + Math.abs(e.balance), 0);
       return (
         <>
           {/* ── Summary Banner ── */}
@@ -687,7 +687,7 @@ const loadLedger = (start, end) => {
           </div>
 
           {/* ── Employee Ledger Cards ── */}
-          {ledger.ledger.map(emp => {
+          {(ledger?.ledger || []).map(emp => {
             const isOwed     = emp.balance > 0.01;   // business owes employee
             const isOverTaken = emp.balance < -0.01;  // employee owes business
             const isSettled  = !isOwed && !isOverTaken;
