@@ -405,7 +405,7 @@ useEffect(() => {
   );
 
   const tabs = user.role === 'admin'
-    ? [['today','🏠', t.today],['cashout','💸', t.cashOut],['employees','👥', t.employees],['reports','📊', t.reports]]
+    ? [['today','🏠', t.today],['cashout','💸', t.cashOut],['employees','👥', t.employees],['reports','📊', t.reports],['expenses','🧾', 'Expenses']]
     : [['today','🏠', t.today],['cashout','💸', t.cashOut]];
 
   return (
@@ -535,7 +535,7 @@ useEffect(() => {
             <div style={fld}><label style={flbl}>{t.who}</label>
               <select style={inp} value={outWho} onChange={e => setOutWho(e.target.value)}>
                 <option value="">{t.selectName}</option>
-                <option>Abdo</option><option>Fares</option><option>Assim</option><option>Kamal</option>
+                <option>Abdo</option><option>Fares</option><option>Assim</option><option>Kamal</option><option>Badr</option>
               </select>
             </div>
             <div style={fld}><label style={flbl}>{t.amount}</label><input style={inp} type="number" placeholder="0.00" inputMode="decimal" value={outAmt} onChange={e => setOutAmt(e.target.value)} /></div>
@@ -930,6 +930,51 @@ useEffect(() => {
                 {pdfLoading ? (isAr ? 'جار الإنشاء...' : 'Generating...') : t.exportPDF}
               </button>
             </div>
+          )}
+        </div>
+      )}
+
+
+      {/* EXPENSES */}
+      {page === 'expenses' && user.role === 'admin' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Expenses</div>
+          <DateRange start={expStart} end={expEnd} onStart={setExpStart} onEnd={setExpEnd} lang={lang} />
+          <button style={btn} onClick={loadExpenses}>Pull Expenses</button>
+          {expLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
+              <RamLoader />
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
+            </div>
+          )}
+          {expData && !expLoading && (
+            <>
+              <div style={{ background: 'rgba(224,82,82,.12)', border: '1px solid rgba(224,82,82,.4)', borderRadius: 14, padding: '14px 18px' }}>
+                <div style={{ fontSize: 10, color: C.red, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Total Expenses</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: C.red }}>{fmt(expData.total)}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{expData.entries.length} entries · {expData.startDate} to {expData.endDate}</div>
+              </div>
+              {expData.byCategory.map((cat, i) => (
+                <div key={i} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.bord}` }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{cat.category}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.red }}>{fmt(cat.total)}</div>
+                  </div>
+                  {cat.entries.map((e, ei) => (
+                    <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                      <div>
+                        <div style={{ fontSize: 13, color: '#fff' }}>{e.who}{e.note ? ` · ${e.note}` : ''}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{e.date} {e.time}</div>
+                      </div>
+                      <div style={{ color: C.red, fontWeight: 600, fontSize: 14 }}>{fmt(e.amount)}</div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {expData.entries.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>No expenses found for this period.</div>
+              )}
+            </>
           )}
         </div>
       )}
