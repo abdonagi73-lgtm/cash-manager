@@ -405,7 +405,7 @@ useEffect(() => {
   );
 
   const tabs = user.role === 'admin'
-    ? [['today','🏠', t.today],['cashout','💸', t.cashOut],['employees','👥', t.employees],['reports','📊', t.reports],['expenses','🧾', 'Expenses']]
+    ? [['today','🏠', t.today],['cashout','💸', t.cashOut],['employees','👥', t.employees],['reports','📊', t.reports],['expenses','🧾', 'Expenses'],['business','📈', 'Business']]
     : [['today','🏠', t.today],['cashout','💸', t.cashOut]];
 
   return (
@@ -979,6 +979,129 @@ useEffect(() => {
         </div>
       )}
 
+
+      {/* BUSINESS DASHBOARD */}
+      {page === 'business' && user.role === 'admin' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Business Dashboard</div>
+            <button style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: C.gold, fontSize: 13, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
+              onClick={loadBiz} disabled={bizLoading}>
+              {bizLoading ? '…' : '↻ Refresh'}
+            </button>
+          </div>
+          <DateRange start={bizStart} end={bizEnd} onStart={setBizStart} onEnd={setBizEnd} lang={lang} />
+          <button style={btn} onClick={loadBiz}>Pull Data</button>
+
+          {bizLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
+              <RamLoader />
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Loading...</div>
+            </div>
+          )}
+
+          {bizData && !bizLoading && (
+            <>
+              {/* Revenue / Cost / Profit */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {[
+                  ['Revenue', fmt(bizData.totalRevenue), C.green],
+                  ['Total Costs', fmt(bizData.totalCosts), C.red],
+                  ['Net Profit', fmt(bizData.netProfit), bizData.netProfit >= 0 ? C.green : C.red],
+                ].map(([l,v,c]) => (
+                  <div key={l} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: c }}>{v}</div>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cost breakdown */}
+              <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Cost Breakdown</div>
+                {[
+                  ['Cash Sales', fmt(bizData.totalCash), C.green],
+                  ['Card Sales', fmt(bizData.totalCard), C.blue],
+                  ['Payroll', fmt(bizData.totalPayroll), C.red],
+                  ['Expenses', fmt(bizData.totalExpenses), C.red],
+                ].map(([l,v,c]) => (
+                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <span style={{ color: C.muted }}>{l}</span>
+                    <span style={{ color: c, fontWeight: 600 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Owner shares */}
+              <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 18px' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Owner Profit Share (33.33% each)</div>
+                {(bizData.owners || []).map(owner => (
+                  <div key={owner.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid rgba(255,255,255,.05)` }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{owner.name}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{owner.share}% share</div>
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: owner.profit >= 0 ? C.green : C.red }}>
+                      {owner.profit >= 0 ? '+' : ''}{fmt(owner.profit)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Expense breakdown */}
+              {bizData.expenseBreakdown?.length > 0 && (
+                <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 18px' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Expense Categories</div>
+                  {bizData.expenseBreakdown.map((cat, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                      <span style={{ color: C.muted }}>{cat.category}</span>
+                      <span style={{ color: C.red, fontWeight: 600 }}>{fmt(cat.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* EDIT CASH OUT ENTRY */}
+      {editEntry && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={e => e.target === e.currentTarget && setEditEntry(null)}>
+          <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ width: 40, height: 4, background: '#2a2a35', borderRadius: 2, margin: '0 auto 6px' }} />
+            <div style={{ fontSize: 20, fontWeight: 700 }}>Edit Entry</div>
+            <div style={{ fontSize: 13, color: C.muted }}>{editEntry.date} · {editEntry.who} · {fmt(editEntry.amount)}</div>
+            <div style={fld}>
+              <label style={flbl}>Reason</label>
+              <select style={inp} value={editReason} onChange={e => setEditReason(e.target.value)}>
+                <option value="">Select reason...</option>
+                <option>Bank Deposit</option><option>Refund</option><option>Supplier Payment</option>
+                <option>Store Expense</option><option>Employee Pay</option><option>Adjustment</option><option>Other</option>
+              </select>
+            </div>
+            <div style={fld}>
+              <label style={flbl}>Note</label>
+              <input style={inp} type="text" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="Add details..." />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button style={btnG} onClick={() => setEditEntry(null)}>Cancel</button>
+              <button style={btn} onClick={() => {
+                callScript('editCashOut', { rowIndex: editEntry.rowIndex, reason: editReason, note: editNote })
+                  .then(() => {
+                    showToast('Entry updated');
+                    setEditEntry(null);
+                    loadDash();
+                    if (activeSheet === 'cashout') reloadSheet('cashout', sheetStart, sheetEnd);
+                  })
+                  .catch(() => showToast('Error updating', 'err'));
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* BOTTOM NAV */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.surf, borderTop: `1px solid ${C.bord}`, display: 'flex', zIndex: 40 }}>
         {tabs.map(([id,ic,lb])=>(
@@ -1030,6 +1153,7 @@ useEffect(() => {
                           <td style={tdStyle}>{e.who}</td>
                           <td style={{...tdStyle,color:C.red,fontWeight:700}}>{fmt(e.amount)}</td>
                           <td style={{...tdStyle,color:C.muted}}>{e.reason}</td>
+                          <td style={tdStyle}><button onClick={()=>{setEditEntry(e);setEditReason(e.reason||'');setEditNote(e.note||'');}} style={{background:'none',border:`1px solid ${C.bord}`,borderRadius:6,color:C.gold,cursor:'pointer',fontSize:11,padding:'3px 8px'}}>Edit</button></td>
                         </tr>
                       ))}</tbody>
                     </table>
