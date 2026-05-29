@@ -224,6 +224,13 @@ export default function App() {
   const [empData, setEmpData] = useState(null);
   const [empLoading, setEmpLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [ledger, setLedger] = useState(null);
+const [ledgerLoading, setLedgerLoading] = useState(false);
+const [ledgerDetail, setLedgerDetail] = useState(null);
+const [adjEmployee, setAdjEmployee] = useState('');
+const [adjAmount, setAdjAmount] = useState('');
+const [adjNote, setAdjNote] = useState('');
+const [adjSubmitting, setAdjSubmitting] = useState(false);
   const [pinAlert, setPinAlert] = useState(false);
   const [faresVideo, setFaresVideo] = useState(false);
   const lowDrawerThreshold = 100;
@@ -282,7 +289,20 @@ export default function App() {
       .catch(() => { showToast('Error', 'err'); setEmpLoading(false); });
   };
 
-  useEffect(() => { if (page === 'employees' && !empData) loadEmployees(); }, [page]);
+  // REPLACE with:
+const loadLedger = () => {
+  setLedgerLoading(true); setLedger(null);
+  callScript('getEmployeeLedger')
+    .then(d => { setLedger(d); setLedgerLoading(false); })
+    .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
+};
+
+useEffect(() => {
+  if (page === 'employees') {
+    if (!empData) loadEmployees();
+    if (!ledger) loadLedger();
+  }
+}, [page]);
 
   const addPin = (k) => {
     if (pin.length >= 4) return;
@@ -549,140 +569,296 @@ export default function App() {
         </div>
       )}
 
-      {/* EMPLOYEES */}
-      {page === 'employees' && user.role === 'admin' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.empHours}</div>
-          <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
-          <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
+// ═══════════════════════════════════════════════════════════════════════
+// EMPLOYEE LEDGER TAB — Replace the existing {page === 'employees'} block
+// in page.js with this code.
+//
+// ALSO ADD to state declarations (near the top of App()):
+//   const [ledger, setLedger] = useState(null);
+//   const [ledgerLoading, setLedgerLoading] = useState(false);
+//   const [ledgerDetail, setLedgerDetail] = useState(null); // employee name to show detail sheet
+//   const [adjEmployee, setAdjEmployee] = useState('');
+//   const [adjAmount, setAdjAmount] = useState('');
+//   const [adjNote, setAdjNote] = useState('');
+//   const [adjSubmitting, setAdjSubmitting] = useState(false);
+//
+// ALSO ADD loadLedger function (near loadEmployees):
+//   const loadLedger = () => {
+//     setLedgerLoading(true); setLedger(null);
+//     callScript('getEmployeeLedger')
+//       .then(d => { setLedger(d); setLedgerLoading(false); })
+//       .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
+//   };
+//
+// ALSO ADD to the useEffect that triggers on page change:
+//   if (page === 'employees' && !ledger) loadLedger();
+// ═══════════════════════════════════════════════════════════════════════
 
-          {empLoading && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 20px' }}>
-              <RamLoader />
-              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{t.loading}</div>
+{page === 'employees' && user.role === 'admin' && (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
+
+    {/* ── Header ── */}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div>
+        <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Employee Ledger</div>
+        {ledger?.asOf && (
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+            Updated {new Date(ledger.asOf).toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </div>
+        )}
+      </div>
+      <button style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: C.gold, fontSize: 13, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
+        onClick={loadLedger} disabled={ledgerLoading}>
+        {ledgerLoading ? '…' : '↻ Refresh'}
+      </button>
+    </div>
+
+    {/* ── Loading ── */}
+    {ledgerLoading && (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 20px' }}>
+        <RamLoader />
+        <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Calculating All-Time Balances…</div>
+      </div>
+    )}
+
+    {/* ── Balance Cards Grid ── */}
+    {ledger && !ledgerLoading && (() => {
+      const totalOwedByBusiness  = ledger.ledger.filter(e => e.balance > 0.01).reduce((s,e) => s + e.balance, 0);
+      const totalOwedByEmployees = ledger.ledger.filter(e => e.balance < -0.01).reduce((s,e) => s + Math.abs(e.balance), 0);
+      return (
+        <>
+          {/* ── Summary Banner ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ background: 'rgba(45,182,125,.12)', border: '1px solid rgba(45,182,125,.4)', borderRadius: 14, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: C.green, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Business Owes</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: C.green }}>{fmt(totalOwedByBusiness)}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>to employees</div>
             </div>
-          )}
+            <div style={{ background: totalOwedByEmployees > 0 ? 'rgba(224,82,82,.12)' : 'rgba(45,182,125,.08)', border: `1px solid ${totalOwedByEmployees > 0 ? 'rgba(224,82,82,.4)' : 'rgba(45,182,125,.2)'}`, borderRadius: 14, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: totalOwedByEmployees > 0 ? C.red : C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Employees Owe</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: totalOwedByEmployees > 0 ? C.red : C.muted }}>{fmt(totalOwedByEmployees)}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>to business</div>
+            </div>
+          </div>
 
-          {empData && !empLoading && (
-            <>
-              {/* Summary balance cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+          {/* ── Employee Ledger Cards ── */}
+          {ledger.ledger.map(emp => {
+            const isOwed     = emp.balance > 0.01;   // business owes employee
+            const isOverTaken = emp.balance < -0.01;  // employee owes business
+            const isSettled  = !isOwed && !isOverTaken;
+            const balColor   = isOwed ? C.green : isOverTaken ? C.red : C.muted;
+            const balBg      = isOwed ? 'rgba(45,182,125,.12)' : isOverTaken ? 'rgba(224,82,82,.12)' : 'rgba(255,255,255,.05)';
+            const balBorder  = isOwed ? 'rgba(45,182,125,.4)' : isOverTaken ? 'rgba(224,82,82,.4)' : 'rgba(255,255,255,.1)';
+
+            return (
+              <div key={emp.name} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 18, overflow: 'hidden' }}>
+                {/* ── Employee Header ── */}
+                <div style={{ background: balBg, borderBottom: `1px solid ${balBorder}`, padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 700 }}>{emp.name}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>${emp.rate}/hr · All-Time</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: balColor, lineHeight: 1 }}>
+                      {emp.balance > 0 ? '+' : ''}{fmt(emp.balance)}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: balColor, marginTop: 4, background: isOwed ? 'rgba(45,182,125,.2)' : isOverTaken ? 'rgba(224,82,82,.2)' : 'rgba(255,255,255,.08)', padding: '3px 8px', borderRadius: 20, display: 'inline-block' }}>
+                      {isOwed ? '● Business Owes' : isOverTaken ? '● Employee Owes' : '✓ Settled'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Stats Grid ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, borderBottom: `1px solid ${C.bord}` }}>
+                  {[
+                    ['Hours Worked', fmtH(emp.totalHours), '#fff'],
+                    ['Total Earned', fmt(emp.totalEarned), C.blue],
+                    ['Total Paid', fmt(emp.totalPaid), C.muted],
+                  ].map(([label, val, color], i) => (
+                    <div key={label} style={{ padding: '12px 14px', borderRight: i < 2 ? `1px solid ${C.bord}` : 'none' }}>
+                      <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 5 }}>{label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Additional Stats ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                  <div style={{ padding: '12px 14px', borderRight: `1px solid ${C.bord}`, borderBottom: `1px solid ${C.bord}` }}>
+                    <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 5 }}>House Account</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: emp.houseAccountBalance > 0 ? C.red : C.muted }}>
+                      {emp.houseAccountBalance > 0 ? '−' : ''}{fmt(emp.houseAccountBalance)}
+                    </div>
+                  </div>
+                  <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.bord}` }}>
+                    <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 5 }}>Last Payment</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{emp.lastPaymentDate}</div>
+                  </div>
+                </div>
+
+                {/* ── Breakdown ── */}
+                <div style={{ padding: '12px 18px', background: C.surf2, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[
+                    ['Earned Wages', `+${fmt(emp.totalEarned)}`, C.green],
+                    ['POS Payouts', `−${fmt(emp.paidViaPOS)}`, C.muted],
+                    ['Manual Cash Out', `−${fmt(emp.paidViaCashOut)}`, C.muted],
+                    ...(emp.houseAccountBalance > 0 ? [['House Account', `−${fmt(emp.houseAccountBalance)}`, C.red]] : []),
+                    ...(emp.manualAdjustments !== 0 ? [['Adjustments', `${emp.manualAdjustments > 0 ? '+' : ''}${fmt(emp.manualAdjustments)}`, emp.manualAdjustments > 0 ? C.blue : C.red]] : []),
+                  ].map(([label, val, color]) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: C.muted }}>{label}</span>
+                      <span style={{ color, fontWeight: 600 }}>{val}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, paddingTop: 8, marginTop: 2, borderTop: `1px solid rgba(255,255,255,.08)` }}>
+                    <span style={{ color: '#fff' }}>Net Balance</span>
+                    <span style={{ color: balColor }}>{emp.balance > 0 ? '+' : ''}{fmt(emp.balance)}</span>
+                  </div>
+                </div>
+
+                {/* ── Detail / Adjust Button ── */}
+                <div style={{ padding: '12px 18px', display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setLedgerDetail(ledgerDetail === emp.name ? null : emp.name)}
+                    style={{ flex: 1, background: 'none', border: `1px solid ${C.bord}`, borderRadius: 10, color: C.muted, fontSize: 13, padding: '10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {ledgerDetail === emp.name ? '▲ Hide History' : '▼ Show History'}
+                  </button>
+                  <button
+                    onClick={() => { setAdjEmployee(emp.name); setAdjAmount(''); setAdjNote(''); }}
+                    style={{ flex: 1, background: 'rgba(212,168,67,.15)', border: '1px solid rgba(212,168,67,.4)', borderRadius: 10, color: C.gold, fontSize: 13, padding: '10px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    + Adjustment
+                  </button>
+                </div>
+
+                {/* ── Detail Expanded ── */}
+                {ledgerDetail === emp.name && (
+                  <div style={{ borderTop: `1px solid ${C.bord}`, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                    {/* House account transactions */}
+                    {emp.houseAccountTransactions?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>House Account Transactions</div>
+                        {emp.houseAccountTransactions.map((tx, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '5px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                            <span style={{ color: C.muted }}>{tx.date} · {tx.note || 'House account'}</span>
+                            <span style={{ color: C.red, fontWeight: 600 }}>{fmt(tx.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Adjustments */}
+                    {emp.adjustmentLog?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Manual Adjustments</div>
+                        {emp.adjustmentLog.map((adj, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '5px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                            <span style={{ color: C.muted }}>{adj.date} · {adj.note || '—'}</span>
+                            <span style={{ color: adj.amount >= 0 ? C.blue : C.red, fontWeight: 600 }}>
+                              {adj.amount > 0 ? '+' : ''}{fmt(adj.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {emp.houseAccountTransactions?.length === 0 && emp.adjustmentLog?.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '8px 0', color: C.muted, fontSize: 13, fontStyle: 'italic' }}>
+                        No house account transactions or adjustments yet.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* ── Old Date-Range Hours View ── */}
+          <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, padding: '14px 18px' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: C.gold }}>Timecard Detail (by Date Range)</div>
+            <DateRange start={empStart} end={empEnd} onStart={setEmpStart} onEnd={setEmpEnd} lang={lang} />
+            <button style={btn} onClick={loadEmployees}>{t.loadHours}</button>
+            {empLoading && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}><RamLoader /></div>
+            )}
+            {empData && !empLoading && (
+              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(empData.employees || []).map(emp => (
-                  <div key={emp.name} style={{ background: Math.abs(emp.runningBalance) < 0.01 ? 'rgba(45,182,125,.12)' : emp.runningBalance > 0 ? 'rgba(91,138,240,.12)' : 'rgba(224,82,82,.12)', border: `1px solid ${Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{emp.name}</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>{emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}</div>
-                    <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{emp.runningBalance > 0.01 ? 'store owes' : emp.runningBalance < -0.01 ? 'over-taken' : 'settled'}</div>
+                  <div key={emp.name} style={{ background: C.surf2, borderRadius: 12, padding: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700 }}>{emp.name}</div>
+                      <div style={{ fontSize: 13, color: C.muted }}>{fmtH(emp.totalHours)} · {fmt(emp.totalExpected)}</div>
+                    </div>
+                    {(emp.periods || []).map((p, pi) => (
+                      <div key={pi} style={{ borderTop: `1px solid rgba(255,255,255,.06)`, paddingTop: 10, marginTop: 6 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+                          <span style={{ color: C.gold, fontWeight: 600 }}>📅 {p.period}</span>
+                          <span style={{ color: Math.abs(p.closingBalance) < 0.01 ? C.green : p.closingBalance > 0 ? C.blue : C.red, fontWeight: 700 }}>
+                            {p.closingBalance > 0 ? '↑ Owed ' : p.closingBalance < 0 ? '↓ Over ' : '✓ '}{fmt(Math.abs(p.closingBalance))}
+                          </span>
+                        </div>
+                        {(p.shifts || []).map((s, si) => (
+                          <div key={si} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '3px 0', color: C.muted }}>
+                            <span>{s.startTime} → {s.endTime}</span>
+                            <span style={{ color: C.blue }}>{fmtH(s.hours)} · {fmt(s.pay)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        </>
+      );
+    })()}
 
-              {/* Fares section */}
-              {empData.fares && empData.fares.total > 0 && (
-                <div style={card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>Fares</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: C.red }}>{fmt(empData.fares.total)}</div>
-                  </div>
-                  <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total taken from register</div>
-                  {(empData.fares.byCategory || []).map((cat, i) => (
-                    <div key={i}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.gold, marginBottom: 6 }}>{cat.category} — {fmt(cat.total)}</div>
-                      {(cat.entries || []).map((e, ei) => (
-                        <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid rgba(255,255,255,.04)`, fontSize: 13 }}>
-                          <div>
-                            <span style={{ color: C.muted, fontSize: 12 }}>{e.date} {e.time} </span>
-                            <span style={{ color: '#ccc' }}>{e.description}</span>
-                          </div>
-                          <div style={{ color: C.red, fontWeight: 600 }}>{fmt(e.amount)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Per employee pay periods */}
-              {(empData.employees || []).map(emp => (
-                <div key={emp.name} style={card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: 20, fontWeight: 700 }}>{emp.name}</div>
-                      <div style={{ fontSize: 12, color: C.muted }}>${emp.rate}/hr · {fmtH(emp.totalHours)} · Expected: {fmt(emp.totalExpected)}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: C.muted }}>Taken: {fmt(emp.totalTaken)}</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: Math.abs(emp.runningBalance) < 0.01 ? C.green : emp.runningBalance > 0 ? C.blue : C.red }}>
-                        Balance: {emp.runningBalance > 0 ? '+' : ''}{fmt(emp.runningBalance)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {(emp.periods || []).map((p, pi) => (
-                    <div key={pi} style={{ background: C.surf2, borderRadius: 12, padding: 14 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>📅 {p.period}</div>
-                          {p.carryIn !== 0 && (
-                            <div style={{ fontSize: 11, color: p.carryIn > 0 ? C.blue : C.red, marginTop: 3 }}>
-                              Carry-in from last week: {p.carryIn > 0 ? '+' : ''}{fmt(p.carryIn)}
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 12, color: C.muted }}>{fmtH(p.hours)} · {fmt(p.expectedPay)}</div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: Math.abs(p.closingBalance) < 0.01 ? C.green : p.closingBalance > 0 ? C.blue : C.red }}>
-                            {p.closingBalance > 0 ? '↑ Owed ' : p.closingBalance < 0 ? '↓ Over ' : '✓ '}{fmt(Math.abs(p.closingBalance))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {(p.shifts || []).length > 0 && (
-                        <div style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Timecards</div>
-                          {(p.shifts || []).map((s, si) => (
-                            <div key={si} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
-                              <span style={{ color: C.muted }}>{s.startTime} → {s.endTime}</span>
-                              <span style={{ color: C.blue }}>{fmtH(s.hours)} · {fmt(s.pay)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {(p.payouts || []).length > 0 && (
-                        <div>
-                          <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Taken from Register</div>
-                          {(p.payouts || []).map((cat, ci) => (
-                            <div key={ci} style={{ marginBottom: 8 }}>
-                              <div style={{ fontSize: 12, fontWeight: 600, color: C.gold, marginBottom: 4 }}>{cat.category} — {fmt(cat.total)}</div>
-                              {(cat.entries || []).map((e, ei) => (
-                                <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0 3px 10px', borderBottom: `1px solid rgba(255,255,255,.03)` }}>
-                                  <span style={{ color: C.muted }}>{e.date} — {e.description}</span>
-                                  <span style={{ color: C.red }}>{fmt(e.amount)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {(p.payouts || []).length === 0 && (
-                        <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>No payouts recorded this period</div>
-                      )}
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: `1px solid rgba(255,255,255,.08)`, fontSize: 12 }}>
-                        <span style={{ color: C.muted }}>Expected: {fmt(p.expectedPay)} · Taken: {fmt(p.totalTaken)}</span>
-                        <span style={{ color: Math.abs(p.periodBalance) < 0.01 ? C.green : p.periodBalance > 0 ? C.blue : C.red, fontWeight: 600 }}>
-                          Period: {p.periodBalance > 0 ? '+' : ''}{fmt(p.periodBalance)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </>
-          )}
+    {/* ── Manual Adjustment Sheet ── */}
+    {adjEmployee && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        onClick={e => e.target === e.currentTarget && setAdjEmployee('')}>
+        <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ width: 40, height: 4, background: '#2a2a35', borderRadius: 2, margin: '0 auto 6px' }} />
+          <div style={{ fontSize: 20, fontWeight: 700 }}>Adjustment · {adjEmployee}</div>
+          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>
+            Use <strong style={{color:'#fff'}}>negative</strong> values for settlement payments or corrections.<br/>
+            Use <strong style={{color:'#fff'}}>positive</strong> values for bonuses or additional amounts owed.
+          </div>
+          <div style={fld}>
+            <label style={flbl}>Amount ($) — negative or positive</label>
+            <input style={inp} type="number" placeholder="e.g. -50.00 or 25.00" inputMode="decimal"
+              value={adjAmount} onChange={e => setAdjAmount(e.target.value)} />
+          </div>
+          <div style={fld}>
+            <label style={flbl}>Note</label>
+            <input style={inp} type="text" placeholder="e.g. Employee paid back cash, or Bonus for extra shift"
+              value={adjNote} onChange={e => setAdjNote(e.target.value)} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <button style={btnG} onClick={() => setAdjEmployee('')}>{t.cancel}</button>
+            <button style={{ ...btn, opacity: adjSubmitting ? 0.6 : 1 }}
+              disabled={adjSubmitting}
+              onClick={() => {
+                if (!adjAmount || isNaN(parseFloat(adjAmount))) { showToast('Enter a valid amount', 'err'); return; }
+                if (!adjNote.trim()) { showToast('Add a note to explain this adjustment', 'err'); return; }
+                setAdjSubmitting(true);
+                callScript('addLedgerAdjustment', { employee: adjEmployee, amount: parseFloat(adjAmount), note: adjNote })
+                  .then(() => {
+                    showToast(`Adjustment saved for ${adjEmployee}`);
+                    setAdjEmployee(''); setAdjSubmitting(false);
+                    loadLedger(); // refresh all-time balances
+                  })
+                  .catch(() => { showToast('Error saving adjustment', 'err'); setAdjSubmitting(false); });
+              }}>
+              {adjSubmitting ? 'Saving…' : 'Save Adjustment'}
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+    )}
+  </div>
+)}
 
       {/* REPORTS */}
       {page === 'reports' && user.role === 'admin' && (
