@@ -230,6 +230,11 @@ const [ledgerDetail, setLedgerDetail] = useState(null);
   const [ledgerStart, setLedgerStart] = useState('2026-01-01');
   const [ledgerEnd, setLedgerEnd] = useState(today());
   const [expandedShifts, setExpandedShifts] = useState(null);
+  const [expandedPayouts, setExpandedPayouts] = useState(null);
+  const [payoutEdit, setPayoutEdit] = useState(null);
+  const [payoutReason, setPayoutReason] = useState('');
+  const [payoutWho, setPayoutWho] = useState('');
+  const [payoutSubmitting, setPayoutSubmitting] = useState(false);
 const [adjEmployee, setAdjEmployee] = useState('');
 const [adjAmount, setAdjAmount] = useState('');
 const [adjNote, setAdjNote] = useState('');
@@ -716,13 +721,16 @@ const loadLedger = (start, end) => {
                 {/* ── Stats Grid ── */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, borderBottom: `1px solid ${C.bord}` }}>
                   {[
-                    ['Hours Worked', fmtH(emp.totalHours), '#fff', true],
-                    ['Total Earned', fmt(emp.totalEarned), C.blue, false],
-                    ['Total Paid', fmt(emp.totalPaid), C.muted, false],
-                  ].map(([label, val, color, clickable], i) => (
+                    ['Hours Worked', fmtH(emp.totalHours), '#fff', true, 'shifts'],
+                    ['Total Earned', fmt(emp.totalEarned), C.blue, false, ''],
+                    ['Total Paid', fmt(emp.totalPaid), C.red, true, 'payouts'],
+                  ].map(([label, val, color, clickable, expandType], i) => (
                     <div key={label}
-                      onClick={clickable ? () => setExpandedShifts(expandedShifts === emp.name ? null : emp.name) : undefined}
-                      style={{ padding: '12px 14px', borderRight: i < 2 ? `1px solid ${C.bord}` : 'none', cursor: clickable ? 'pointer' : 'default', background: clickable && expandedShifts === emp.name ? 'rgba(255,255,255,.05)' : 'transparent' }}>
+                      onClick={clickable ? () => {
+                        if (expandType === 'shifts') setExpandedShifts(expandedShifts === emp.name ? null : emp.name);
+                        if (expandType === 'payouts') setExpandedPayouts(expandedPayouts === emp.name ? null : emp.name);
+                      } : undefined}
+                      style={{ padding: '12px 14px', borderRight: i < 2 ? `1px solid ${C.bord}` : 'none', cursor: clickable ? 'pointer' : 'default', background: (clickable && expandType === 'shifts' && expandedShifts === emp.name) || (clickable && expandType === 'payouts' && expandedPayouts === emp.name) ? 'rgba(255,255,255,.05)' : 'transparent' }}>
                       <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 5 }}>{label}{clickable ? ' ›' : ''}</div>
                       <div style={{ fontSize: 16, fontWeight: 700, color }}>{val}</div>
                     </div>
@@ -749,6 +757,33 @@ const loadLedger = (start, end) => {
                         {emp.name === 'Fares' ? 'Salaried — no timecards' : emp.name === 'Badr' ? 'Owner — no timecards' : 'No shifts found for this period'}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ── Payouts Expansion ── */}
+                {expandedPayouts === emp.name && (
+                  <div style={{ borderTop: `1px solid ${C.bord}`, background: 'rgba(255,255,255,.02)' }}>
+                    <div style={{ padding: '12px 14px 8px', fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                      Paid Out Entries — tap to reassign or move to expenses
+                    </div>
+                    {(emp.payoutEntries || []).length === 0 && (
+                      <div style={{ padding: '12px 14px', fontSize: 12, color: C.muted, fontStyle: 'italic' }}>No payout entries found.</div>
+                    )}
+                    {(emp.payoutEntries || []).map((entry, ei) => (
+                      <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{entry.source === 'pos' ? '🏧 POS' : '💵 Cash Out'} · {entry.who}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{entry.date} · {entry.description || entry.note || entry.reason || '—'}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ color: C.red, fontWeight: 700, fontSize: 14 }}>{fmt(entry.amount)}</div>
+                          <button onClick={() => { setPayoutEdit(entry); setPayoutReason(entry.reason || 'Employee Pay'); setPayoutWho(emp.name); }}
+                            style={{ background: 'rgba(212,168,67,.15)', border: '1px solid rgba(212,168,67,.4)', borderRadius: 8, color: C.gold, cursor: 'pointer', fontSize: 11, padding: '4px 10px', fontFamily: 'inherit' }}>
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -1197,6 +1232,74 @@ const loadLedger = (start, end) => {
                   })
                   .catch(() => showToast('Error updating', 'err'));
               }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAYOUT EDIT MODAL */}
+      {payoutEdit && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.9)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={e => e.target === e.currentTarget && setPayoutEdit(null)}>
+          <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ width: 40, height: 4, background: '#2a2a35', borderRadius: 2, margin: '0 auto 6px' }} />
+            <div style={{ fontSize: 20, fontWeight: 700 }}>Edit Payout Entry</div>
+            <div style={{ background: C.surf2, borderRadius: 12, padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{payoutEdit.date} · {payoutEdit.source === 'pos' ? 'POS Register' : 'Cash Out Log'}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: C.red }}>{fmt(payoutEdit.amount)}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{payoutEdit.description || payoutEdit.note || '—'}</div>
+            </div>
+
+            <div style={fld}>
+              <label style={flbl}>Move to / Assign to</label>
+              <select style={inp} value={payoutWho} onChange={e => setPayoutWho(e.target.value)}>
+                <option value="Assim">Assim — Employee Wages</option>
+                <option value="Kamal">Kamal — Employee Wages</option>
+                <option value="Abdo">Abdo — Employee Wages</option>
+                <option value="Fares">Fares — Employee Wages</option>
+                <option value="Badr">Badr — Employee Wages</option>
+                <option value="_expense">Move to Expenses (not payroll)</option>
+              </select>
+            </div>
+
+            <div style={fld}>
+              <label style={flbl}>Reason / Category</label>
+              <select style={inp} value={payoutReason} onChange={e => setPayoutReason(e.target.value)}>
+                <option value="Employee Pay">Employee Pay</option>
+                <option value="Bank Deposit">Bank Deposit</option>
+                <option value="Refund">Refund</option>
+                <option value="Supplier Payment">Supplier Payment</option>
+                <option value="Store Expense">Store Expense</option>
+                <option value="Adjustment">Adjustment</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div style={{ fontSize: 12, color: C.muted, background: 'rgba(212,168,67,.08)', border: '1px solid rgba(212,168,67,.2)', borderRadius: 10, padding: '10px 14px', lineHeight: 1.6 }}>
+              {payoutWho === '_expense'
+                ? '⚠️ This entry will be removed from all employee wages and counted as a business expense.'
+                : `✓ This entry will count toward ${payoutWho}'s wages with reason: ${payoutReason}`}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button style={btnG} onClick={() => setPayoutEdit(null)}>Cancel</button>
+              <button style={{ ...btn, opacity: payoutSubmitting ? 0.6 : 1 }} disabled={payoutSubmitting}
+                onClick={() => {
+                  setPayoutSubmitting(true);
+                  const newWho    = payoutWho === '_expense' ? payoutEdit.who : payoutWho;
+                  const newReason = payoutWho === '_expense' ? payoutReason : 'Employee Pay';
+                  callScript('editCashOut', { rowIndex: payoutEdit.rowIndex, reason: newReason, note: payoutEdit.note || '', who: newWho })
+                    .then(() => {
+                      showToast('Entry updated — refresh ledger to see changes');
+                      setPayoutEdit(null);
+                      setPayoutSubmitting(false);
+                      setExpandedPayouts(null);
+                      loadLedger();
+                    })
+                    .catch(() => { showToast('Error updating', 'err'); setPayoutSubmitting(false); });
+                }}>
+                {payoutSubmitting ? 'Saving…' : 'Save Changes'}
+              </button>
             </div>
           </div>
         </div>
