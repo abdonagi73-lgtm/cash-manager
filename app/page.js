@@ -231,8 +231,7 @@ const [ledgerDetail, setLedgerDetail] = useState(null);
   const [ledgerEnd, setLedgerEnd] = useState(today());
   const [expandedShifts, setExpandedShifts] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState('Assim');
-  const [syncInfo, setSyncInfo] = useState(null);
-  const [syncing, setSyncing] = useState(false);
+
   const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [expandedPayouts, setExpandedPayouts] = useState(null);
   const [payoutEdit, setPayoutEdit] = useState(null);
@@ -321,18 +320,6 @@ const loadLedger = (start, end) => {
     .catch(() => { showToast('Error loading ledger', 'err'); setLedgerLoading(false); });
 };
 
-  const forceSync = () => {
-    setSyncing(true);
-    showToast('Full sync started — this may take 30s…');
-    callScript('syncCache', { force: 'true' })
-      .then(d => {
-        setSyncInfo(d);
-        setSyncing(false);
-        showToast(`Sync done — ${d.posNewEvents || 0} POS events, ${d.tcNewShifts || 0} shifts cached`);
-        loadLedger();
-      })
-      .catch(() => { showToast('Sync error', 'err'); setSyncing(false); });
-  };
 
   const loadExpenses = () => {
     setExpLoading(true); setExpData(null);
@@ -645,20 +632,12 @@ const loadLedger = (start, end) => {
             Updated {new Date(ledger.asOf).toLocaleString('en-US', { timeZone: 'America/Detroit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
           </div>
         )}
-        <div style={{ fontSize: 10, color: 'rgba(212,168,67,.6)', marginTop: 2 }}>
-          {syncing ? '⏳ Syncing from Square…' : '⚡ Cached — tap Full Sync to refresh from Square'}
-        </div>
+
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: C.gold, fontSize: 13, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
-          onClick={() => loadLedger()} disabled={ledgerLoading || syncing}>
-          {ledgerLoading ? '…' : '↻'}
-        </button>
-        <button style={{ background: syncing ? 'rgba(212,168,67,.05)' : 'rgba(212,168,67,.15)', border: '1px solid rgba(212,168,67,.4)', borderRadius: 10, color: C.gold, fontSize: 12, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
-          onClick={forceSync} disabled={syncing || ledgerLoading}>
-          {syncing ? '⏳ Syncing…' : '⚡ Full Sync'}
-        </button>
-      </div>
+      <button style={{ background: C.surf2, border: `1px solid ${C.bord}`, borderRadius: 10, color: C.gold, fontSize: 13, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
+        onClick={() => loadLedger()} disabled={ledgerLoading}>
+        {ledgerLoading ? '…' : '↻ Refresh'}
+      </button>
     </div>
 
     {/* ── Date Range Presets ── */}
