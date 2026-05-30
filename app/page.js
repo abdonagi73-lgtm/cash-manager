@@ -1313,7 +1313,7 @@ const loadLedger = (start, end) => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button style={btnG} onClick={() => setShowCashOutModal(false)}>{t.cancel}</button>
-              <button style={btn} onClick={() => { confirmOut(); setShowCashOutModal(false); }}>{t.reviewSubmit}</button>
+              <button style={btn} onClick={() => { setShowCashOutModal(false); confirmOut(); }}>{t.reviewSubmit}</button>
             </div>
           </div>
         </div>
