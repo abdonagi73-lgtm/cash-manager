@@ -687,24 +687,29 @@ const loadLedger = (start, end) => {
     )}
 
     {/* ── Balance Cards Grid ── */}
-    {ledger && !ledgerLoading && (() => {
-      const totalOwedByBusiness  = (ledger?.ledger || []).filter(e => e.balance > 0.01).reduce((s,e) => s + e.balance, 0);
-      const totalOwedByEmployees = (ledger?.ledger || []).filter(e => e.balance < -0.01).reduce((s,e) => s + Math.abs(e.balance), 0);
-      return (
-        <>
-          {/* ── Summary Banner ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div style={{ background: 'rgba(45,182,125,.12)', border: '1px solid rgba(45,182,125,.4)', borderRadius: 14, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: C.green, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Business Owes</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: C.green }}>{fmt(totalOwedByBusiness)}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>to employees</div>
-            </div>
-            <div style={{ background: totalOwedByEmployees > 0 ? 'rgba(224,82,82,.12)' : 'rgba(45,182,125,.08)', border: `1px solid ${totalOwedByEmployees > 0 ? 'rgba(224,82,82,.4)' : 'rgba(45,182,125,.2)'}`, borderRadius: 14, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: totalOwedByEmployees > 0 ? C.red : C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Employees Owe</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: totalOwedByEmployees > 0 ? C.red : C.muted }}>{fmt(totalOwedByEmployees)}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>to business</div>
-            </div>
-          </div>
+    {ledger && !ledgerLoading && (
+      <>
+          {/* ── Summary Banner — selected employee only ── */}
+          {(() => {
+            const sel = (ledger?.ledger || []).find(e => e.name === selectedEmployee);
+            if (!sel) return null;
+            const owedByBiz = sel.balance > 0.01;
+            const owedByEmp = sel.balance < -0.01;
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ background: owedByBiz ? 'rgba(45,182,125,.12)' : 'rgba(255,255,255,.04)', border: `1px solid ${owedByBiz ? 'rgba(45,182,125,.4)' : C.bord}`, borderRadius: 14, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 10, color: owedByBiz ? C.green : C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Business Owes</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: owedByBiz ? C.green : C.muted }}>{owedByBiz ? fmt(sel.balance) : '$0.00'}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>to {selectedEmployee}</div>
+                </div>
+                <div style={{ background: owedByEmp ? 'rgba(224,82,82,.12)' : 'rgba(255,255,255,.04)', border: `1px solid ${owedByEmp ? 'rgba(224,82,82,.4)' : C.bord}`, borderRadius: 14, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 10, color: owedByEmp ? C.red : C.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Employee Owes</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: owedByEmp ? C.red : C.muted }}>{owedByEmp ? fmt(Math.abs(sel.balance)) : '$0.00'}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>to business</div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Employee Ledger Cards ── */}
           {(ledger?.ledger || []).filter(emp => emp.name === selectedEmployee).map(emp => {
@@ -903,7 +908,7 @@ const loadLedger = (start, end) => {
             )}
             {empData && !empLoading && (
               <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {(empData.employees || []).map(emp => (
+                {(empData.employees || []).filter(emp => emp.name === selectedEmployee).map(emp => (
                   <div key={emp.name} style={{ background: C.surf2, borderRadius: 12, padding: 14 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                       <div style={{ fontSize: 15, fontWeight: 700 }}>{emp.name}</div>
@@ -931,8 +936,7 @@ const loadLedger = (start, end) => {
             )}
           </div>
         </>
-      );
-    })()}
+    )}
 
     {/* ── Manual Adjustment Sheet ── */}
     {adjEmployee && (
