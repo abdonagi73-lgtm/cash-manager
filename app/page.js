@@ -230,6 +230,8 @@ const [ledgerDetail, setLedgerDetail] = useState(null);
   const [ledgerStart, setLedgerStart] = useState('2026-01-01');
   const [ledgerEnd, setLedgerEnd] = useState(today());
   const [expandedShifts, setExpandedShifts] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState('Assim');
+  const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [expandedPayouts, setExpandedPayouts] = useState(null);
   const [payoutEdit, setPayoutEdit] = useState(null);
   const [payoutReason, setPayoutReason] = useState('');
@@ -440,8 +442,8 @@ const loadLedger = (start, end) => {
   );
 
   const tabs = user.role === 'admin'
-    ? [['today','🏠', t.today],['cashout','💸', t.cashOut],['employees','👥', t.employees],['reports','📊', t.reports],['expenses','🧾', 'Expenses'],['business','📈', 'Business']]
-    : [['today','🏠', t.today],['cashout','💸', t.cashOut]];
+    ? [['today','🏠', t.today],['employees','👥', t.employees],['reports','📊', t.reports],['expenses','🧾', 'Expenses'],['business','📈', 'Business']]
+    : [['today','🏠', t.today],];
 
   return (
     <div dir={isAr ? 'rtl' : 'ltr'} style={{ margin: 0, background: C.bg, color: '#fff', fontFamily: isAr ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter',-apple-system,sans-serif", minHeight: '100vh', fontSize: 16 }}>
@@ -609,6 +611,16 @@ const loadLedger = (start, end) => {
 {page === 'employees' && user.role === 'admin' && (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
 
+    {/* ── Employee Name Tabs ── */}
+    <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${C.bord}`, marginBottom: 4, overflowX: 'auto' }}>
+      {['Assim','Kamal','Abdo','Fares','Badr'].map(name => (
+        <button key={name} onClick={() => setSelectedEmployee(name)}
+          style={{ flex: 1, padding: '12px 8px', background: 'none', border: 'none', borderBottom: selectedEmployee === name ? `2px solid ${C.gold}` : '2px solid transparent', color: selectedEmployee === name ? C.gold : C.muted, fontWeight: selectedEmployee === name ? 700 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+          {name}
+        </button>
+      ))}
+    </div>
+
     {/* ── Header ── */}
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
@@ -692,7 +704,7 @@ const loadLedger = (start, end) => {
           </div>
 
           {/* ── Employee Ledger Cards ── */}
-          {(ledger?.ledger || []).map(emp => {
+          {(ledger?.ledger || []).filter(emp => emp.name === selectedEmployee).map(emp => {
             const isOwed     = emp.balance > 0.01;   // business owes employee
             const isOverTaken = emp.balance < -0.01;  // employee owes business
             const isSettled  = !isOwed && !isOverTaken;
@@ -1066,7 +1078,11 @@ const loadLedger = (start, end) => {
       {/* EXPENSES */}
       {page === 'expenses' && user.role === 'admin' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 14px 90px' }}>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Expenses</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 12, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Expenses</div>
+            <button style={{ background: 'rgba(212,168,67,.15)', border: '1px solid rgba(212,168,67,.4)', borderRadius: 10, color: C.gold, fontSize: 13, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
+              onClick={() => setShowCashOutModal(true)}>+ Log Cash Out</button>
+          </div>
           <DateRange start={expStart} end={expEnd} onStart={setExpStart} onEnd={setExpEnd} lang={lang} />
           <button style={btn} onClick={loadExpenses}>Pull Expenses</button>
           {expLoading && (
@@ -1082,6 +1098,37 @@ const loadLedger = (start, end) => {
                 <div style={{ fontSize: 28, fontWeight: 700, color: C.red }}>{fmt(expData.total)}</div>
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{expData.entries.length} entries · {expData.startDate} to {expData.endDate}</div>
               </div>
+              {/* Bank Deposits Section */}
+              {(() => {
+                const deposits = expData.allEntries?.filter(e => e.isDeposit) || [];
+                const depTotal = deposits.reduce((s,e) => s + e.amount, 0);
+                if (deposits.length === 0) return null;
+                return (
+                  <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderBottom: `1px solid ${C.bord}` }}
+                      onClick={() => setExpandedShifts(expandedShifts === 'deposits' ? null : 'deposits')}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 700 }}>🏦 Bank Deposits</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{deposits.length} transactions</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: C.blue }}>{fmt(depTotal)}</div>
+                        <div style={{ color: C.muted }}>{expandedShifts === 'deposits' ? '▲' : '▼'}</div>
+                      </div>
+                    </div>
+                    {expandedShifts === 'deposits' && deposits.map((e, ei) => (
+                      <div key={ei} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                        <div>
+                          <div style={{ fontSize: 13, color: '#fff' }}>{e.description || 'Bank Deposit'}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{e.date}</div>
+                        </div>
+                        <div style={{ color: C.blue, fontWeight: 600 }}>{fmt(e.amount)}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
               {expData.byCategory.map((cat, i) => (
                 <div key={i} style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.bord}` }}>
@@ -1232,6 +1279,41 @@ const loadLedger = (start, end) => {
                   })
                   .catch(() => showToast('Error updating', 'err'));
               }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CASH OUT MODAL */}
+      {showCashOutModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.9)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={e => e.target === e.currentTarget && setShowCashOutModal(false)}>
+          <div style={{ background: C.surf, border: `1px solid ${C.bord}`, borderRadius: '28px 28px 0 0', padding: '12px 20px 48px', width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ width: 40, height: 4, background: '#2a2a35', borderRadius: 2, margin: '0 auto 6px' }} />
+            <div style={{ fontSize: 20, fontWeight: 700 }}>Log Cash Out</div>
+            <div style={fld}><label style={flbl}>{t.who}</label>
+              <select style={inp} value={outWho} onChange={e => setOutWho(e.target.value)}>
+                <option value="">{t.selectName}</option>
+                <option>Abdo</option><option>Fares</option><option>Assim</option><option>Kamal</option><option>Badr</option>
+              </select>
+            </div>
+            <div style={fld}><label style={flbl}>{t.amount}</label>
+              <input style={inp} type="number" placeholder="0.00" inputMode="decimal" value={outAmount} onChange={e => setOutAmount(e.target.value)} />
+            </div>
+            <div style={fld}><label style={flbl}>{t.reason}</label>
+              <select style={inp} value={outReason} onChange={e => { setOutReason(e.target.value); if(e.target.value !== 'Employee Pay') setOutHours(''); }}>
+                <option value="">{t.selectReason}</option>
+                <option>Bank Deposit</option><option>Refund</option><option>Supplier Payment</option>
+                <option>Store Expense</option><option>Employee Pay</option><option>Adjustment</option><option>Other</option>
+              </select>
+            </div>
+            {outReason === 'Employee Pay' && <div style={fld}><label style={flbl}>{t.hoursWorked}</label><input style={inp} type="number" placeholder="0" value={outHours} onChange={e => setOutHours(e.target.value)} /></div>}
+            <div style={fld}><label style={flbl}>{t.note}</label>
+              <input style={inp} type="text" placeholder={t.optional} value={outNote} onChange={e => setOutNote(e.target.value)} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button style={btnG} onClick={() => setShowCashOutModal(false)}>{t.cancel}</button>
+              <button style={btn} onClick={() => { confirmOut(); setShowCashOutModal(false); }}>{t.reviewSubmit}</button>
             </div>
           </div>
         </div>
