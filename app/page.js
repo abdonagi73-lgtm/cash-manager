@@ -1298,7 +1298,7 @@ const loadLedger = (start, end) => {
               </select>
             </div>
             <div style={fld}><label style={flbl}>{t.amount}</label>
-              <input style={inp} type="number" placeholder="0.00" inputMode="decimal" value={outAmount} onChange={e => setOutAmount(e.target.value)} />
+              <input style={inp} type="number" placeholder="0.00" inputMode="decimal" value={outAmt} onChange={e => setOutAmt(e.target.value)} />
             </div>
             <div style={fld}><label style={flbl}>{t.reason}</label>
               <select style={inp} value={outReason} onChange={e => { setOutReason(e.target.value); if(e.target.value !== 'Employee Pay') setOutHours(''); }}>
